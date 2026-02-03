@@ -56,6 +56,36 @@
           </div>
         </div>
         <p class="winner-text">{{ resultMessage }}</p>
+
+        <div v-if="matchData" class="bet-info">
+          Apuesta: {{ matchData.amount }} BCH
+        </div>
+
+        <div v-if="paymentStatus" class="payment-status">
+          <div v-if="paymentStatus === 'processing'" class="payment-processing">
+            <div class="spinner-small"></div>
+            <span>Enviando pago...</span>
+          </div>
+          <div v-else-if="paymentStatus === 'completed'" class="payment-success">
+            Pago enviado correctamente
+            <a v-if="explorerUrl" :href="explorerUrl" target="_blank" class="tx-link">
+              Ver transaccion
+            </a>
+          </div>
+          <div v-else-if="paymentStatus === 'waiting_payment'" class="payment-waiting">
+            Esperando pago del oponente...
+          </div>
+          <div v-else-if="paymentStatus === 'received'" class="payment-success">
+            Pago recibido!
+            <a v-if="explorerUrl" :href="explorerUrl" target="_blank" class="tx-link">
+              Ver transaccion
+            </a>
+          </div>
+          <div v-else-if="paymentStatus === 'error'" class="payment-error">
+            {{ paymentError }}
+          </div>
+        </div>
+
         <button @click="endMatch" class="back-btn">Volver al Lobby</button>
       </div>
     </div>
@@ -63,7 +93,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import gunManager from "../lib/gun-manager";
 import walletService from "../lib/wallet-service";
 import {
@@ -97,6 +127,19 @@ export default {
     const resultMessage = ref("");
     const playerRole = ref(null);
     const roleDetected = ref(false);
+    const matchData = ref(null);
+    const paymentStatus = ref("");
+    const paymentError = ref("");
+    const paymentTxId = ref("");
+
+    const explorerUrl = computed(() => {
+      if (!paymentTxId.value) return "";
+      const isTestnet = walletService.isTestnet;
+      const base = isTestnet
+        ? "https://blockchair.com/bitcoin-cash/testnet/transaction/"
+        : "https://blockchair.com/bitcoin-cash/transaction/";
+      return base + paymentTxId.value;
+    });
 
     const selectMove = (index) => {
       selectedMove.value = index;
@@ -119,7 +162,7 @@ export default {
       // El resultado se calculara cuando ambos reveals esten disponibles
     };
 
-    const calculateResult = (myMove, theirMove) => {
+    const calculateResult = async (myMove, theirMove) => {
       // determineWinner espera (moveA, moveB) en ese orden
       const moveA = playerRole.value === "A" ? myMove : theirMove;
       const moveB = playerRole.value === "A" ? theirMove : myMove;
@@ -132,11 +175,47 @@ export default {
         (playerRole.value === "B" && winner === "playerB")
       ) {
         resultMessage.value = "Ganaste!";
+        // El oponente debe pagarme - esperamos que su cliente lo haga
+        paymentStatus.value = "waiting_payment";
       } else {
         resultMessage.value = "Perdiste";
+        // Yo perdí, debo pagar al ganador
+        await processPayment();
       }
 
       gamePhase.value = "result";
+    };
+
+    const processPayment = async () => {
+      if (!matchData.value || !matchData.value.amount) {
+        paymentError.value = "Error: datos del match no disponibles";
+        return;
+      }
+
+      const amount = parseFloat(matchData.value.amount);
+      const winnerAddress = playerRole.value === "A"
+        ? matchData.value.playerB
+        : matchData.value.playerA;
+
+      paymentStatus.value = "processing";
+
+      try {
+        const result = await walletService.send(winnerAddress, amount);
+        paymentStatus.value = "completed";
+        paymentTxId.value = result.txid;
+        console.log("Pago enviado:", result.txid);
+
+        // Notificar el pago via GunDB
+        await gunManager.matches.get(props.matchId).put({
+          paymentTxId: result.txid,
+          paymentFrom: playerRole.value,
+          paymentTime: Date.now()
+        });
+      } catch (error) {
+        paymentStatus.value = "error";
+        paymentError.value = `Error al enviar pago: ${error.message}`;
+        console.error("Error en pago:", error);
+      }
     };
 
     const endMatch = () => {
@@ -149,6 +228,15 @@ export default {
       gunManager.watchMatch(props.matchId, (data) => {
         console.log("Match update:", data);
 
+        // Guardar datos del match para el pago
+        if (data.amount && data.playerA && data.playerB) {
+          matchData.value = {
+            amount: data.amount,
+            playerA: data.playerA,
+            playerB: data.playerB
+          };
+        }
+
         // Detectar rol del jugador comparando direcciones (solo una vez)
         if (data.playerA && data.playerB && !roleDetected.value) {
           if (data.playerB === myAddress) {
@@ -159,6 +247,13 @@ export default {
             console.log("Detectado como jugador A");
           }
           roleDetected.value = true;
+        }
+
+        // Detectar pago recibido
+        if (data.paymentTxId && paymentStatus.value === "waiting_payment") {
+          paymentStatus.value = "received";
+          paymentTxId.value = data.paymentTxId;
+          console.log("Pago recibido:", data.paymentTxId);
         }
 
         // No procesar si aún no se detecta el rol
@@ -213,6 +308,11 @@ export default {
       resultMessage,
       roleDetected,
       playerRole,
+      matchData,
+      paymentStatus,
+      paymentError,
+      paymentTxId,
+      explorerUrl,
       selectMove,
       commitMove,
       revealMove,
@@ -370,5 +470,69 @@ export default {
   text-align: center;
   margin: 2rem 0;
   font-weight: bold;
+}
+
+.bet-info {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #555;
+  margin-bottom: 1rem;
+}
+
+.payment-status {
+  text-align: center;
+  padding: 1rem;
+  border-radius: 10px;
+  margin: 1rem 0;
+}
+
+.payment-processing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #1976d2;
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1976d2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.payment-success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.payment-waiting {
+  background: #fff3e0;
+  color: #e65100;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.payment-error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.tx-link {
+  display: block;
+  margin-top: 0.5rem;
+  color: #1565c0;
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+
+.tx-link:hover {
+  color: #0d47a1;
 }
 </style>

@@ -24,6 +24,7 @@ class WalletService {
   constructor() {
     this.wallet = null;
     this.isTestnet = false; // Usar mainnet por defecto (BCH tiene tarifas muy bajas)
+    this.balanceWatchCancel = null; // Referencia para cancelar el watcher
   }
 
   /**
@@ -125,6 +126,9 @@ class WalletService {
   async send(toAddress, amountBCH) {
     if (!this.wallet) throw new Error("Wallet no conectada");
 
+    // Cancelar el watcher de balance si existe (evita conflicto de sockets)
+    await this.stopWatchingBalance();
+
     const amountSats = BigInt(Math.floor(amountBCH * 100_000_000));
 
     const result = await this.wallet.send([
@@ -164,15 +168,32 @@ class WalletService {
    * Observar cambios en el balance
    * @param {function} callback - Funcion a llamar cuando cambia el balance
    */
-  watchBalance(callback) {
+  async watchBalance(callback) {
     if (!this.wallet) throw new Error("Wallet no conectada");
-    return this.wallet.watchBalance(callback);
+
+    // Cancelar watcher anterior si existe
+    await this.stopWatchingBalance();
+
+    const cancel = await this.wallet.watchBalance(callback);
+    this.balanceWatchCancel = cancel;
+    return cancel;
+  }
+
+  /**
+   * Cancelar el watcher de balance
+   */
+  async stopWatchingBalance() {
+    if (this.balanceWatchCancel && typeof this.balanceWatchCancel === 'function') {
+      await this.balanceWatchCancel();
+      this.balanceWatchCancel = null;
+    }
   }
 
   /**
    * Desconectar la wallet
    */
-  disconnect() {
+  async disconnect() {
+    await this.stopWatchingBalance();
     this.wallet = null;
   }
 
