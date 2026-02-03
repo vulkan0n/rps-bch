@@ -4,8 +4,14 @@
       <h2>Sala de Juego</h2>
       <p class="match-id">Match ID: {{ matchId }}</p>
 
-      <div v-if="gamePhase === 'selecting'" class="selection-phase">
+      <div v-if="!roleDetected" class="loading-phase">
+        <div class="spinner"></div>
+        <p>Conectando a la partida...</p>
+      </div>
+
+      <div v-else-if="gamePhase === 'selecting'" class="selection-phase">
         <h3>Elige tu jugada:</h3>
+        <p class="role-info">Eres el jugador {{ playerRole }}</p>
         <div class="moves">
           <button
             v-for="(move, index) in moves"
@@ -37,6 +43,7 @@
 
       <div v-else-if="gamePhase === 'result'" class="result-phase">
         <h3>Resultado</h3>
+        <p class="role-info">Eres el jugador {{ playerRole }}</p>
         <div class="result-display">
           <div class="player-result">
             <p>Tu</p>
@@ -58,6 +65,7 @@
 <script>
 import { ref, onMounted } from "vue";
 import gunManager from "../lib/gun-manager";
+import walletService from "../lib/wallet-service";
 import {
   MOVES,
   MOVE_NAMES,
@@ -87,7 +95,8 @@ export default {
     const opponentMove = ref(null);
     const opponentCommit = ref(null);
     const resultMessage = ref("");
-    const playerRole = ref("A");
+    const playerRole = ref(null);
+    const roleDetected = ref(false);
 
     const selectMove = (index) => {
       selectedMove.value = index;
@@ -111,7 +120,10 @@ export default {
     };
 
     const calculateResult = (myMove, theirMove) => {
-      const winner = determineWinner(myMove, theirMove);
+      // determineWinner espera (moveA, moveB) en ese orden
+      const moveA = playerRole.value === "A" ? myMove : theirMove;
+      const moveB = playerRole.value === "A" ? theirMove : myMove;
+      const winner = determineWinner(moveA, moveB);
 
       if (winner === "draw") {
         resultMessage.value = "Empate!";
@@ -132,19 +144,37 @@ export default {
     };
 
     onMounted(() => {
+      const myAddress = walletService.getAddress();
+
       gunManager.watchMatch(props.matchId, (data) => {
         console.log("Match update:", data);
 
-        const opponentCommitKey = playerRole.value === "A" ? "commitB" : "commitA";
-        const playerCommitKey = playerRole.value === "A" ? "commitA" : "commitB";
-        const opponentRevealKey = playerRole.value === "A" ? "revealB" : "revealA";
-        const playerRevealKey = playerRole.value === "A" ? "revealA" : "revealB";
+        // Detectar rol del jugador comparando direcciones (solo una vez)
+        if (data.playerA && data.playerB && !roleDetected.value) {
+          if (data.playerB === myAddress) {
+            playerRole.value = "B";
+            console.log("Detectado como jugador B");
+          } else {
+            playerRole.value = "A";
+            console.log("Detectado como jugador A");
+          }
+          roleDetected.value = true;
+        }
 
-        const opponentCommitted = data[opponentCommitKey] && data[opponentCommitKey].hash;
-        const playerCommitted = data[playerCommitKey] && data[playerCommitKey].hash;
+        // No procesar si aún no se detecta el rol
+        if (!roleDetected.value) return;
+
+        const opponentCommitKey = playerRole.value === "A" ? "commitBHash" : "commitAHash";
+        const playerCommitKey = playerRole.value === "A" ? "commitAHash" : "commitBHash";
+        const opponentRevealMoveKey = playerRole.value === "A" ? "revealBMove" : "revealAMove";
+        const opponentRevealSecretKey = playerRole.value === "A" ? "revealBSecret" : "revealASecret";
+        const playerRevealMoveKey = playerRole.value === "A" ? "revealAMove" : "revealBMove";
+
+        const opponentCommitted = !!data[opponentCommitKey];
+        const playerCommitted = !!data[playerCommitKey];
 
         if (opponentCommitted) {
-          opponentCommit.value = data[opponentCommitKey].hash;
+          opponentCommit.value = data[opponentCommitKey];
         }
 
         // Cambiar a fase de revelacion cuando ambos hayan hecho commit
@@ -153,15 +183,16 @@ export default {
         }
 
         // Detectar reveals y calcular resultado
-        const opponentRevealed = data[opponentRevealKey] && data[opponentRevealKey].move !== undefined;
-        const playerRevealed = data[playerRevealKey] && data[playerRevealKey].move !== undefined;
+        const opponentRevealed = data[opponentRevealMoveKey] !== undefined;
+        const playerRevealed = data[playerRevealMoveKey] !== undefined;
 
         if (opponentRevealed && playerRevealed && gamePhase.value !== "result") {
-          const theirReveal = data[opponentRevealKey];
+          const theirMove = data[opponentRevealMoveKey];
+          const theirSecret = data[opponentRevealSecretKey];
 
           // Verificar que el reveal del oponente coincide con su commit
-          if (verifyReveal(theirReveal.move, theirReveal.secret, opponentCommit.value)) {
-            opponentMove.value = theirReveal.move;
+          if (verifyReveal(theirMove, theirSecret, opponentCommit.value)) {
+            opponentMove.value = theirMove;
             calculateResult(playerMove.value, opponentMove.value);
           } else {
             resultMessage.value = "El oponente hizo trampa! Ganaste por default.";
@@ -180,6 +211,8 @@ export default {
       playerMove,
       opponentMove,
       resultMessage,
+      roleDetected,
+      playerRole,
       selectMove,
       commitMove,
       revealMove,
@@ -200,6 +233,7 @@ export default {
   border-radius: 15px;
   padding: 2rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  color: #1a1a1a;
 }
 
 .match-id {
@@ -227,6 +261,7 @@ export default {
   border-radius: 15px;
   cursor: pointer;
   transition: all 0.3s;
+  color: #1a1a1a;
 }
 
 .move-btn:hover {
@@ -270,9 +305,15 @@ export default {
   transform: scale(1.05);
 }
 
-.waiting-phase {
+.waiting-phase,
+.loading-phase {
   text-align: center;
   padding: 3rem;
+}
+
+.role-info {
+  color: #444;
+  margin-bottom: 1rem;
 }
 
 .spinner {
@@ -296,7 +337,7 @@ export default {
 
 .commit-status {
   font-family: monospace;
-  color: #666;
+  color: #333;
   margin-top: 1rem;
 }
 
@@ -321,7 +362,7 @@ export default {
 .vs {
   font-size: 2rem;
   font-weight: bold;
-  color: #666;
+  color: #333;
 }
 
 .winner-text {

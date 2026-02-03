@@ -99,6 +99,15 @@ class WalletService {
   }
 
   /**
+   * Exportar la clave privada en formato WIF
+   * @returns {string} WIF (Wallet Import Format)
+   */
+  exportWIF() {
+    if (!this.wallet) throw new Error("Wallet no conectada");
+    return this.wallet.privateKeyWif;
+  }
+
+  /**
    * Obtener el hash publico de la clave (PKH) para smart contracts
    * @returns {Promise<Uint8Array>}
    */

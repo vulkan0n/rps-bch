@@ -41,9 +41,25 @@
 
     <div v-else class="lobby-section">
       <div class="player-info">
-        <p>Direccion: {{ shortAddress }}</p>
-        <p>Balance: {{ balance }} BCH</p>
-        <button class="disconnect-btn" @click="disconnectWallet">Desconectar</button>
+        <div class="address-row">
+          <div class="address-details">
+            <p>Direccion: {{ shortAddress }}</p>
+            <p class="full-address">{{ playerAddress }}</p>
+            <p>Balance: {{ balance }} BCH</p>
+          </div>
+          <QrCode :value="playerAddress" :size="100" />
+        </div>
+        <div class="wallet-actions">
+          <button class="export-btn" @click="toggleShowWIF">
+            {{ showWIF ? 'Ocultar WIF' : 'Exportar WIF' }}
+          </button>
+          <button class="disconnect-btn" @click="disconnectWallet">Desconectar</button>
+        </div>
+        <div v-if="showWIF" class="wif-display">
+          <p class="wif-warning">Guarda esta clave en un lugar seguro. Quien tenga acceso a ella puede controlar tus fondos.</p>
+          <code class="wif-code">{{ exportedWIF }}</code>
+          <button class="copy-btn" @click="copyWIF">Copiar</button>
+        </div>
       </div>
 
       <div v-if="isTestnet" class="testnet-notice">
@@ -80,9 +96,11 @@
 import { ref, onMounted, computed, watch } from "vue";
 import gunManager from "../lib/gun-manager";
 import walletService from "../lib/wallet-service";
+import QrCode from "./QrCode.vue";
 
 export default {
   name: "GameLobby",
+  components: { QrCode },
   emits: ["match-created"],
   setup(props, { emit }) {
     const playerAddress = ref("");
@@ -94,6 +112,8 @@ export default {
     const connectionError = ref("");
     const wifInput = ref("");
     const isTestnet = ref(false);
+    const showWIF = ref(false);
+    const exportedWIF = ref("");
 
     const shortAddress = computed(() => {
       if (!playerAddress.value) return "";
@@ -158,6 +178,24 @@ export default {
       playerAddress.value = "";
       balance.value = 0;
       currentPlayerId.value = null;
+      showWIF.value = false;
+      exportedWIF.value = "";
+    };
+
+    const toggleShowWIF = () => {
+      if (!showWIF.value) {
+        exportedWIF.value = walletService.exportWIF();
+      }
+      showWIF.value = !showWIF.value;
+    };
+
+    const copyWIF = async () => {
+      try {
+        await navigator.clipboard.writeText(exportedWIF.value);
+        alert("WIF copiado al portapapeles");
+      } catch (error) {
+        console.error("Error al copiar:", error);
+      }
     };
 
     const toggleNetwork = () => {
@@ -233,7 +271,19 @@ export default {
       emit("match-created", matchId);
     };
 
-    onMounted(() => {
+    onMounted(async () => {
+      // Restaurar estado si la wallet ya está conectada
+      if (walletService.isConnected()) {
+        try {
+          playerAddress.value = walletService.getAddress();
+          const balanceResult = await walletService.getBalance();
+          balance.value = balanceResult.bch;
+          startBalanceWatch();
+        } catch (error) {
+          console.error("Error restaurando wallet:", error);
+        }
+      }
+
       // Escuchar cambios en el lobby
       gunManager.watchLobby((game) => {
         if (game.address !== playerAddress.value && game.status === "waiting") {
@@ -277,10 +327,14 @@ export default {
       connectionError,
       wifInput,
       isTestnet,
+      showWIF,
+      exportedWIF,
       createNewWallet,
       useNamedWallet,
       importWallet,
       disconnectWallet,
+      toggleShowWIF,
+      copyWIF,
       toggleNetwork,
       createLobbyEntry,
       joinGame,
@@ -294,6 +348,7 @@ export default {
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
+  color: #1a1a1a;
 }
 
 .wallet-section,
@@ -301,6 +356,7 @@ export default {
   background: #f5f5f5;
   padding: 20px;
   border-radius: 10px;
+  color: #1a1a1a;
 }
 
 .wallet-options {
@@ -336,8 +392,9 @@ export default {
 .import-section input {
   flex: 1;
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid #aaa;
   border-radius: 5px;
+  color: #1a1a1a;
 }
 
 .testnet-toggle {
@@ -366,7 +423,28 @@ export default {
   padding: 15px;
   border-radius: 5px;
   margin-bottom: 20px;
-  position: relative;
+}
+
+.address-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.address-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.address-details p {
+  margin: 5px 0;
+  word-break: break-all;
+}
+
+.full-address {
+  font-size: 0.75rem;
+  color: #333;
+  font-family: monospace;
 }
 
 .player-info p {
@@ -374,10 +452,23 @@ export default {
   word-break: break-all;
 }
 
+.wallet-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.export-btn {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  background: #1976d2;
+}
+
+.export-btn:hover {
+  background: #1565c0;
+}
+
 .disconnect-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
   padding: 5px 10px;
   font-size: 0.8rem;
   background: #ef5350;
@@ -385,6 +476,41 @@ export default {
 
 .disconnect-btn:hover {
   background: #e53935;
+}
+
+.wif-display {
+  margin-top: 15px;
+  padding: 10px;
+  background: #fff8e1;
+  border: 1px solid #ffb300;
+  border-radius: 5px;
+}
+
+.wif-warning {
+  color: #e65100;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+.wif-code {
+  display: block;
+  background: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  word-break: break-all;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.copy-btn {
+  padding: 5px 15px;
+  font-size: 0.8rem;
+  background: #ff9800;
+}
+
+.copy-btn:hover {
+  background: #f57c00;
 }
 
 .testnet-notice {
@@ -411,8 +537,9 @@ export default {
   width: 150px;
   padding: 8px;
   margin-right: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #aaa;
   border-radius: 5px;
+  color: #1a1a1a;
 }
 
 .available-games {
@@ -424,7 +551,7 @@ export default {
 }
 
 .no-games {
-  color: #666;
+  color: #444;
   font-style: italic;
   padding: 10px;
 }
@@ -437,6 +564,7 @@ export default {
   background: white;
   margin: 10px 0;
   border-radius: 5px;
+  color: #1a1a1a;
 }
 
 button {

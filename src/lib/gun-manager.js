@@ -57,19 +57,19 @@ class GunManager {
 
   // Enviar commit
   async sendCommit(matchId, player, commit) {
-    await this.matches.get(matchId).get(`commit${player}`).put({
-      hash: commit,
-      timestamp: Date.now(),
-    });
+    const commitData = {};
+    commitData[`commit${player}Hash`] = commit;
+    commitData[`commit${player}Time`] = Date.now();
+    await this.matches.get(matchId).put(commitData);
   }
 
   // Enviar reveal
   async sendReveal(matchId, player, move, secret) {
-    await this.matches.get(matchId).get(`reveal${player}`).put({
-      move: move,
-      secret: secret,
-      timestamp: Date.now(),
-    });
+    const revealData = {};
+    revealData[`reveal${player}Move`] = move;
+    revealData[`reveal${player}Secret`] = secret;
+    revealData[`reveal${player}Time`] = Date.now();
+    await this.matches.get(matchId).put(revealData);
   }
 
   // Observar partida
