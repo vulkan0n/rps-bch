@@ -1,0 +1,63 @@
+pragma cashscript ^0.10.0;
+
+contract RockPaperScissors(
+    bytes20 playerAPKH,
+    bytes20 playerBPKH,
+    bytes32 commitA,
+    bytes32 commitB,
+    int timeout
+) {
+    function reveal(
+        int moveA,
+        bytes32 secretA,
+        int moveB,
+        bytes32 secretB,
+        pubkey pk,
+        sig s
+    ) {
+        // Verificar commits
+        bytes32 hashA = sha256(bytes(moveA) + secretA);
+        bytes32 hashB = sha256(bytes(moveB) + secretB);
+        require(hashA == commitA);
+        require(hashB == commitB);
+
+        // Validar jugadas (0=piedra, 1=papel, 2=tijera)
+        require(moveA >= 0 && moveA <= 2);
+        require(moveB >= 0 && moveB <= 2);
+
+        // Determinar ganador
+        bytes20 winner;
+        if (moveA == moveB) {
+            // Empate - dividir fondos
+            int halfAmount = tx.value / 2;
+            require(tx.outputs[0].value == halfAmount);
+            require(tx.outputs[1].value == halfAmount);
+            require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(playerAPKH));
+            require(tx.outputs[1].lockingBytecode == new LockingBytecodeP2PKH(playerBPKH));
+        } else if (
+            (moveA == 0 && moveB == 2) || // piedra vence tijera
+            (moveA == 1 && moveB == 0) || // papel vence piedra
+            (moveA == 2 && moveB == 1)    // tijera vence papel
+        ) {
+            winner = playerAPKH;
+            require(tx.outputs[0].value >= tx.value - 1000);
+            require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(winner));
+        } else {
+            winner = playerBPKH;
+            require(tx.outputs[0].value >= tx.value - 1000);
+            require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(winner));
+        }
+
+        require(checkSig(s, pk));
+    }
+
+    function timeout(pubkey pk, sig s) {
+        // Permitir recuperar fondos despues del timeout
+        require(tx.time >= timeout);
+
+        bytes20 pkh = hash160(pk);
+        require(pkh == playerAPKH || pkh == playerBPKH);
+        require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(pkh));
+        require(checkSig(s, pk));
+    }
+}
