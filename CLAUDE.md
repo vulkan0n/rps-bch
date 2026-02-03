@@ -47,3 +47,8 @@ Players commit SHA256(move + secret) to GunDB before revealing. Both must commit
 ### Path Aliases
 
 `@/*` maps to `./src/*` (configured in jsconfig.json)
+
+## Notas de desarrollo
+
+- GunDB requiere propiedades planas (no anidadas) para que `.on()` las detecte
+- El rol del jugador (A/B) se detecta comparando la dirección de wallet con playerA/playerB del match
