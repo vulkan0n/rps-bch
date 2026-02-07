@@ -53,12 +53,53 @@
           <button class="export-btn" @click="toggleShowWIF">
             {{ showWIF ? 'Ocultar WIF' : 'Exportar WIF' }}
           </button>
+          <button class="send-btn" @click="toggleShowSend">
+            {{ showSend ? 'Cancelar Envío' : 'Extraer BCH' }}
+          </button>
           <button class="disconnect-btn" @click="disconnectWallet">Desconectar</button>
         </div>
         <div v-if="showWIF" class="wif-display">
           <p class="wif-warning">Guarda esta clave en un lugar seguro. Quien tenga acceso a ella puede controlar tus fondos.</p>
           <code class="wif-code">{{ exportedWIF }}</code>
           <button class="copy-btn" @click="copyWIF">Copiar</button>
+        </div>
+        <div v-if="showSend" class="send-section">
+          <div class="send-form">
+            <input
+              v-model="sendAddress"
+              type="text"
+              placeholder="Dirección destino (bitcoincash:...)"
+              :disabled="isSending"
+            />
+            <div class="amount-row">
+              <input
+                v-model.number="sendAmount"
+                type="number"
+                step="0.00001"
+                min="0.00001"
+                placeholder="Cantidad BCH"
+                :disabled="isSending"
+              />
+              <button class="max-btn" @click="fillMaxAmount" :disabled="isSending">
+                Max
+              </button>
+            </div>
+            <button
+              @click="sendBCH"
+              :disabled="isSending || !sendAddress || !sendAmount || sendAmount <= 0 || sendAmount > balance"
+            >
+              {{ isSending ? 'Enviando...' : 'Confirmar Envío' }}
+            </button>
+          </div>
+          <div v-if="sendResult" class="send-success">
+            Enviado! TX:
+            <a :href="explorerUrl + sendResult" target="_blank">
+              {{ sendResult.slice(0, 20) }}...
+            </a>
+          </div>
+          <div v-if="sendError" class="send-error">
+            {{ sendError }}
+          </div>
         </div>
       </div>
 
@@ -114,6 +155,18 @@ export default {
     const isTestnet = ref(false);
     const showWIF = ref(false);
     const exportedWIF = ref("");
+    const showSend = ref(false);
+    const sendAddress = ref("");
+    const sendAmount = ref(null);
+    const isSending = ref(false);
+    const sendResult = ref("");
+    const sendError = ref("");
+
+    const explorerUrl = computed(() =>
+      isTestnet.value
+        ? "https://chipnet.chaingraph.cash/tx/"
+        : "https://blockchair.com/bitcoin-cash/transaction/"
+    );
 
     const shortAddress = computed(() => {
       if (!playerAddress.value) return "";
@@ -195,6 +248,53 @@ export default {
         alert("WIF copiado al portapapeles");
       } catch (error) {
         console.error("Error al copiar:", error);
+      }
+    };
+
+    const toggleShowSend = () => {
+      showSend.value = !showSend.value;
+      if (!showSend.value) {
+        sendAddress.value = "";
+        sendAmount.value = null;
+        sendResult.value = "";
+        sendError.value = "";
+      }
+    };
+
+    const fillMaxAmount = () => {
+      sendAmount.value = balance.value;
+    };
+
+    const sendBCH = async () => {
+      sendError.value = "";
+      sendResult.value = "";
+
+      if (!sendAddress.value) {
+        sendError.value = "Ingresa una dirección destino";
+        return;
+      }
+      if (!sendAmount.value || sendAmount.value <= 0) {
+        sendError.value = "Ingresa una cantidad válida";
+        return;
+      }
+      if (sendAmount.value > balance.value) {
+        sendError.value = "Balance insuficiente";
+        return;
+      }
+
+      isSending.value = true;
+      try {
+        const result = await walletService.send(sendAddress.value, sendAmount.value);
+        sendResult.value = result.txId || result.txid || result;
+        sendAddress.value = "";
+        sendAmount.value = null;
+        await updateBalance();
+        startBalanceWatch();
+      } catch (error) {
+        sendError.value = `Error al enviar: ${error.message}`;
+        console.error("Error enviando BCH:", error);
+      } finally {
+        isSending.value = false;
       }
     };
 
@@ -329,12 +429,22 @@ export default {
       isTestnet,
       showWIF,
       exportedWIF,
+      showSend,
+      sendAddress,
+      sendAmount,
+      isSending,
+      sendResult,
+      sendError,
+      explorerUrl,
       createNewWallet,
       useNamedWallet,
       importWallet,
       disconnectWallet,
       toggleShowWIF,
       copyWIF,
+      toggleShowSend,
+      fillMaxAmount,
+      sendBCH,
       toggleNetwork,
       createLobbyEntry,
       joinGame,
@@ -511,6 +621,81 @@ export default {
 
 .copy-btn:hover {
   background: #f57c00;
+}
+
+.send-btn {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  background: #2e7d32;
+}
+
+.send-btn:hover {
+  background: #1b5e20;
+}
+
+.send-section {
+  margin-top: 15px;
+  padding: 10px;
+  background: #e8f5e9;
+  border: 1px solid #66bb6a;
+  border-radius: 5px;
+}
+
+.send-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.send-form input {
+  padding: 8px;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+  color: #1a1a1a;
+  font-size: 0.9rem;
+}
+
+.amount-row {
+  display: flex;
+  gap: 8px;
+}
+
+.amount-row input {
+  flex: 1;
+}
+
+.max-btn {
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  background: #ff9800;
+}
+
+.max-btn:hover {
+  background: #f57c00;
+}
+
+.send-success {
+  margin-top: 10px;
+  padding: 8px;
+  background: #c8e6c9;
+  border-radius: 5px;
+  color: #2e7d32;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.send-success a {
+  color: #1b5e20;
+  font-weight: bold;
+}
+
+.send-error {
+  margin-top: 10px;
+  padding: 8px;
+  background: #ffebee;
+  border-radius: 5px;
+  color: #c62828;
+  font-size: 0.85rem;
 }
 
 .testnet-notice {
