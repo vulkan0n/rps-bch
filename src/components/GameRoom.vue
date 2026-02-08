@@ -1,17 +1,17 @@
 <template>
   <div class="game-room">
     <div class="game-container">
-      <h2>Sala de Juego</h2>
+      <h2>{{ $t('room.title') }}</h2>
       <p class="match-id">Match ID: {{ matchId }}</p>
 
       <div v-if="!roleDetected" class="loading-phase">
         <div class="spinner"></div>
-        <p>Conectando a la partida...</p>
+        <p>{{ $t('room.connectingToMatch') }}</p>
       </div>
 
       <div v-else-if="gamePhase === 'selecting'" class="selection-phase">
-        <h3>Elige tu jugada:</h3>
-        <p class="role-info">Eres el jugador {{ playerRole }}</p>
+        <h3>{{ $t('room.chooseMove') }}</h3>
+        <p class="role-info">{{ $t('room.youArePlayer', { role: playerRole }) }}</p>
         <div class="moves">
           <button
             v-for="(move, index) in moves"
@@ -21,64 +21,64 @@
             :class="{ selected: selectedMove === index }"
           >
             <span class="move-icon">{{ moveIcons[index] }}</span>
-            <span class="move-name">{{ move }}</span>
+            <span class="move-name">{{ $t('moves.' + move) }}</span>
           </button>
         </div>
 
         <button v-if="selectedMove !== null" @click="commitMove" class="commit-btn">
-          Confirmar Jugada
+          {{ $t('room.confirmMove') }}
         </button>
       </div>
 
       <div v-else-if="gamePhase === 'waiting'" class="waiting-phase">
         <div class="spinner"></div>
-        <p>Esperando al oponente...</p>
-        <p class="commit-status">Tu commit: {{ playerCommit?.substring(0, 10) }}...</p>
+        <p>{{ $t('room.waitingForOpponent') }}</p>
+        <p class="commit-status">{{ $t('room.yourCommit') }}: {{ playerCommit?.substring(0, 10) }}...</p>
       </div>
 
       <div v-else-if="gamePhase === 'revealing'" class="reveal-phase">
-        <h3>Fase de Revelacion</h3>
-        <button @click="revealMove" class="reveal-btn">Revelar Jugada</button>
+        <h3>{{ $t('room.revealPhase') }}</h3>
+        <button @click="revealMove" class="reveal-btn">{{ $t('room.revealMove') }}</button>
       </div>
 
       <div v-else-if="gamePhase === 'result'" class="result-phase">
-        <h3>Resultado</h3>
-        <p class="role-info">Eres el jugador {{ playerRole }}</p>
+        <h3>{{ $t('room.result') }}</h3>
+        <p class="role-info">{{ $t('room.youArePlayer', { role: playerRole }) }}</p>
         <div class="result-display">
           <div class="player-result">
-            <p>Tu</p>
+            <p>{{ $t('room.you') }}</p>
             <span class="result-icon">{{ moveIcons[playerMove] }}</span>
           </div>
           <div class="vs">VS</div>
           <div class="player-result">
-            <p>Oponente</p>
+            <p>{{ $t('room.opponent') }}</p>
             <span class="result-icon">{{ moveIcons[opponentMove] }}</span>
           </div>
         </div>
         <p class="winner-text">{{ resultMessage }}</p>
 
         <div v-if="matchData" class="bet-info">
-          Apuesta: {{ matchData.amount }} BCH
+          {{ $t('room.bet') }}: {{ matchData.amount }} BCH
         </div>
 
         <div v-if="paymentStatus" class="payment-status">
           <div v-if="paymentStatus === 'processing'" class="payment-processing">
             <div class="spinner-small"></div>
-            <span>Enviando pago...</span>
+            <span>{{ $t('room.sendingPayment') }}</span>
           </div>
           <div v-else-if="paymentStatus === 'completed'" class="payment-success">
-            Pago enviado correctamente
+            {{ $t('room.paymentSent') }}
             <a v-if="explorerUrl" :href="explorerUrl" target="_blank" class="tx-link">
-              Ver transaccion
+              {{ $t('room.viewTransaction') }}
             </a>
           </div>
           <div v-else-if="paymentStatus === 'waiting_payment'" class="payment-waiting">
-            Esperando pago del oponente...
+            {{ $t('room.waitingForPayment') }}
           </div>
           <div v-else-if="paymentStatus === 'received'" class="payment-success">
-            Pago recibido!
+            {{ $t('room.paymentReceived') }}
             <a v-if="explorerUrl" :href="explorerUrl" target="_blank" class="tx-link">
-              Ver transaccion
+              {{ $t('room.viewTransaction') }}
             </a>
           </div>
           <div v-else-if="paymentStatus === 'error'" class="payment-error">
@@ -86,7 +86,7 @@
           </div>
         </div>
 
-        <button @click="endMatch" class="back-btn">Volver al Lobby</button>
+        <button @click="endMatch" class="back-btn">{{ $t('room.backToLobby') }}</button>
       </div>
     </div>
   </div>
@@ -94,6 +94,7 @@
 
 <script>
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import gunManager from "../lib/gun-manager";
 import walletService from "../lib/wallet-service";
 import {
@@ -115,6 +116,7 @@ export default {
   },
   emits: ["match-ended"],
   setup(props, { emit }) {
+    const { t } = useI18n();
     const moves = ref(MOVE_NAMES);
     const moveIcons = ref(["🪨", "📄", "✂️"]);
     const gamePhase = ref("selecting");
@@ -169,16 +171,16 @@ export default {
       const winner = determineWinner(moveA, moveB);
 
       if (winner === "draw") {
-        resultMessage.value = "Empate!";
+        resultMessage.value = t('room.draw');
       } else if (
         (playerRole.value === "A" && winner === "playerA") ||
         (playerRole.value === "B" && winner === "playerB")
       ) {
-        resultMessage.value = "Ganaste!";
+        resultMessage.value = t('room.youWin');
         // El oponente debe pagarme - esperamos que su cliente lo haga
         paymentStatus.value = "waiting_payment";
       } else {
-        resultMessage.value = "Perdiste";
+        resultMessage.value = t('room.youLose');
         // Yo perdí, debo pagar al ganador
         await processPayment();
       }
@@ -188,7 +190,7 @@ export default {
 
     const processPayment = async () => {
       if (!matchData.value || !matchData.value.amount) {
-        paymentError.value = "Error: datos del match no disponibles";
+        paymentError.value = t('room.matchDataError');
         return;
       }
 
@@ -213,7 +215,7 @@ export default {
         });
       } catch (error) {
         paymentStatus.value = "error";
-        paymentError.value = `Error al enviar pago: ${error.message}`;
+        paymentError.value = t('room.paymentError', { message: error.message });
         console.error("Error en pago:", error);
       }
     };
@@ -290,7 +292,7 @@ export default {
             opponentMove.value = theirMove;
             calculateResult(playerMove.value, opponentMove.value);
           } else {
-            resultMessage.value = "El oponente hizo trampa! Ganaste por default.";
+            resultMessage.value = t('room.opponentCheated');
             gamePhase.value = "result";
           }
         }

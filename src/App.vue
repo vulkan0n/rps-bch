@@ -1,8 +1,25 @@
 <template>
   <div id="app">
     <header>
-      <h1>Piedra, Papel o Tijera</h1>
-      <p class="subtitle">Juega y apuesta con Bitcoin Cash</p>
+      <div class="lang-selector" v-click-outside="closeLangDropdown">
+        <button class="lang-current" @click="langDropdownOpen = !langDropdownOpen">
+          <span class="lang-flag">{{ locale === 'en' ? '🇺🇸' : '🇪🇸' }}</span>
+          <span class="lang-code">{{ locale === 'en' ? 'EN' : 'ES' }}</span>
+          <span class="lang-arrow">&#9662;</span>
+        </button>
+        <div v-if="langDropdownOpen" class="lang-dropdown">
+          <button
+            class="lang-option"
+            :class="{ active: locale !== 'en' }"
+            @click="setLocale(locale === 'en' ? 'es' : 'en')"
+          >
+            <span class="lang-flag">{{ locale === 'en' ? '🇪🇸' : '🇺🇸' }}</span>
+            <span class="lang-code">{{ locale === 'en' ? 'ES' : 'EN' }}</span>
+          </button>
+        </div>
+      </div>
+      <h1>{{ $t('app.title') }}</h1>
+      <p class="subtitle">{{ $t('app.subtitle') }}</p>
     </header>
 
     <main>
@@ -11,13 +28,14 @@
     </main>
 
     <footer>
-      <p>Powered by Bitcoin Cash | P2P with GunDB | CashScript Smart Contracts</p>
+      <p>{{ $t('app.footer') }}</p>
     </footer>
   </div>
 </template>
 
 <script>
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import GameLobby from "./components/GameLobby.vue";
 import GameRoom from "./components/GameRoom.vue";
 
@@ -27,8 +45,33 @@ export default {
     GameLobby,
     GameRoom,
   },
+  directives: {
+    'click-outside': {
+      mounted(el, binding) {
+        el._clickOutside = (e) => {
+          if (!el.contains(e.target)) binding.value();
+        };
+        document.addEventListener('click', el._clickOutside);
+      },
+      unmounted(el) {
+        document.removeEventListener('click', el._clickOutside);
+      },
+    },
+  },
   setup() {
+    const { locale } = useI18n();
     const currentMatch = ref(null);
+    const langDropdownOpen = ref(false);
+
+    const setLocale = (lang) => {
+      locale.value = lang;
+      localStorage.setItem('rps-bch-locale', lang);
+      langDropdownOpen.value = false;
+    };
+
+    const closeLangDropdown = () => {
+      langDropdownOpen.value = false;
+    };
 
     const handleMatchCreated = (matchId) => {
       currentMatch.value = matchId;
@@ -39,7 +82,11 @@ export default {
     };
 
     return {
+      locale,
       currentMatch,
+      langDropdownOpen,
+      setLocale,
+      closeLangDropdown,
       handleMatchCreated,
       handleMatchEnded,
     };
@@ -72,6 +119,7 @@ header {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   color: white;
+  position: relative;
 }
 
 header h1 {
@@ -83,6 +131,75 @@ header h1 {
 .subtitle {
   font-size: 1.1rem;
   opacity: 0.9;
+}
+
+.lang-selector {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.lang-current {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.lang-current:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.lang-flag {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.lang-code {
+  font-size: 0.85rem;
+}
+
+.lang-arrow {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.lang-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  min-width: 100%;
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: bold;
+  transition: background 0.15s;
+}
+
+.lang-option:hover {
+  background: rgba(102, 126, 234, 0.15);
 }
 
 main {

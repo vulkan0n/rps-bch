@@ -1,41 +1,41 @@
 <template>
   <div class="game-lobby">
-    <h2>Lobby de Juego</h2>
+    <h2>{{ $t('lobby.title') }}</h2>
 
     <div v-if="isLoadingWallet" class="loading-section">
       <div class="spinner"></div>
-      <p>Cargando wallet...</p>
+      <p>{{ $t('lobby.loadingWallet') }}</p>
     </div>
 
     <div v-else-if="!playerAddress" class="wallet-section">
       <div class="wallet-options">
-        <h3>Conectar Wallet</h3>
+        <h3>{{ $t('lobby.connectWallet') }}</h3>
         <p class="network-badge" :class="{ testnet: isTestnet }">
           {{ isTestnet ? 'TestNet' : 'MainNet' }}
         </p>
 
         <button @click="createNewWallet" :disabled="isConnecting">
-          {{ isConnecting ? 'Conectando...' : 'Crear Wallet Nueva' }}
+          {{ isConnecting ? $t('lobby.connecting') : $t('lobby.createNewWallet') }}
         </button>
 
         <button @click="useNamedWallet" :disabled="isConnecting">
-          Usar Wallet Guardada
+          {{ $t('lobby.useSavedWallet') }}
         </button>
 
         <div class="import-section">
           <input
             v-model="wifInput"
             type="password"
-            placeholder="Importar WIF (clave privada)"
+            :placeholder="$t('lobby.importWifPlaceholder')"
           />
           <button @click="importWallet" :disabled="isConnecting || !wifInput">
-            Importar
+            {{ $t('lobby.import') }}
           </button>
         </div>
 
         <label class="testnet-toggle">
           <input type="checkbox" v-model="isTestnet" @change="toggleNetwork" />
-          Usar TestNet (recomendado para pruebas)
+          {{ $t('lobby.useTestnet') }}
         </label>
       </div>
 
@@ -48,32 +48,32 @@
       <div class="player-info">
         <div class="address-row">
           <div class="address-details">
-            <p>Direccion: {{ shortAddress }}</p>
+            <p>{{ $t('lobby.address') }}: {{ shortAddress }}</p>
             <p class="full-address">{{ playerAddress }}</p>
-            <p>Balance: {{ balance }} BCH</p>
+            <p>{{ $t('lobby.balance') }}: {{ balance }} BCH</p>
           </div>
           <QrCode :value="playerAddress" :size="100" />
         </div>
         <div class="wallet-actions">
           <button class="export-btn" @click="toggleShowWIF">
-            {{ showWIF ? 'Ocultar WIF' : 'Exportar WIF' }}
+            {{ showWIF ? $t('lobby.hideWif') : $t('lobby.exportWif') }}
           </button>
           <button class="send-btn" @click="toggleShowSend">
-            {{ showSend ? 'Cancelar Envío' : 'Extraer BCH' }}
+            {{ showSend ? $t('lobby.cancelSend') : $t('lobby.withdrawBch') }}
           </button>
-          <button class="disconnect-btn" @click="disconnectWallet">Desconectar</button>
+          <button class="disconnect-btn" @click="disconnectWallet">{{ $t('lobby.disconnect') }}</button>
         </div>
         <div v-if="showWIF" class="wif-display">
-          <p class="wif-warning">Guarda esta clave en un lugar seguro. Quien tenga acceso a ella puede controlar tus fondos.</p>
+          <p class="wif-warning">{{ $t('lobby.wifWarning') }}</p>
           <code class="wif-code">{{ exportedWIF }}</code>
-          <button class="copy-btn" @click="copyWIF">Copiar</button>
+          <button class="copy-btn" @click="copyWIF">{{ $t('lobby.copy') }}</button>
         </div>
         <div v-if="showSend" class="send-section">
           <div class="send-form">
             <input
               v-model="sendAddress"
               type="text"
-              placeholder="Dirección destino (bitcoincash:...)"
+              :placeholder="$t('lobby.destAddressPlaceholder')"
               :disabled="isSending"
             />
             <div class="amount-row">
@@ -82,7 +82,7 @@
                 type="number"
                 step="0.00001"
                 min="0.00001"
-                placeholder="Cantidad BCH"
+                :placeholder="$t('lobby.amountPlaceholder')"
                 :disabled="isSending"
               />
               <button class="max-btn" @click="fillMaxAmount" :disabled="isSending">
@@ -93,11 +93,11 @@
               @click="sendBCH"
               :disabled="isSending || !sendAddress || !sendAmount || sendAmount <= 0 || sendAmount > balance"
             >
-              {{ isSending ? 'Enviando...' : 'Confirmar Envío' }}
+              {{ isSending ? $t('lobby.sending') : $t('lobby.confirmSend') }}
             </button>
           </div>
           <div v-if="sendResult" class="send-success">
-            Enviado! TX:
+            {{ $t('lobby.sent') }}
             <a :href="explorerUrl + sendResult" target="_blank">
               {{ sendResult.slice(0, 20) }}...
             </a>
@@ -109,28 +109,28 @@
       </div>
 
       <div v-if="isTestnet" class="testnet-notice">
-        Estas en TestNet. Puedes obtener BCH de prueba en:
+        {{ $t('lobby.testnetNotice') }}
         <a href="https://tbch.googol.cash/" target="_blank">tbch.googol.cash</a>
       </div>
 
       <div class="create-game">
-        <h3>Crear Partida</h3>
-        <input v-model="betAmount" type="number" step="0.001" min="0.001" placeholder="Cantidad BCH" />
+        <h3>{{ $t('lobby.createGame') }}</h3>
+        <input v-model="betAmount" type="number" step="0.001" min="0.001" :placeholder="$t('lobby.amountPlaceholder')" />
         <button @click="createLobbyEntry" :disabled="betAmount > balance">
-          Publicar en Lobby
+          {{ $t('lobby.publishToLobby') }}
         </button>
       </div>
 
       <div class="available-games">
-        <h3>Partidas Disponibles</h3>
+        <h3>{{ $t('lobby.availableGames') }}</h3>
         <div v-if="availableGames.length === 0" class="no-games">
-          No hay partidas disponibles
+          {{ $t('lobby.noGames') }}
         </div>
         <div v-for="game in availableGames" :key="game.id" class="game-item">
           <span>{{ game.address.slice(0, 15) }}...</span>
           <span>{{ game.amount }} BCH</span>
           <button @click="joinGame(game)" :disabled="game.amount > balance">
-            Unirse
+            {{ $t('lobby.join') }}
           </button>
         </div>
       </div>
@@ -140,6 +140,7 @@
 
 <script>
 import { ref, onMounted, computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import gunManager from "../lib/gun-manager";
 import walletService from "../lib/wallet-service";
 import QrCode from "./QrCode.vue";
@@ -149,6 +150,7 @@ export default {
   components: { QrCode },
   emits: ["match-created"],
   setup(props, { emit }) {
+    const { t } = useI18n();
     const playerAddress = ref("");
     const balance = ref(0);
     const betAmount = ref(0.001);
@@ -191,7 +193,7 @@ export default {
         balance.value = result.balance.bch;
         startBalanceWatch();
       } catch (error) {
-        connectionError.value = `Error al crear wallet: ${error.message}`;
+        connectionError.value = t('lobby.walletCreateError', { message: error.message });
         console.error(error);
       } finally {
         isConnecting.value = false;
@@ -207,7 +209,7 @@ export default {
         balance.value = result.balance.bch;
         startBalanceWatch();
       } catch (error) {
-        connectionError.value = `Error al cargar wallet: ${error.message}`;
+        connectionError.value = t('lobby.walletLoadError', { message: error.message });
         console.error(error);
       } finally {
         isConnecting.value = false;
@@ -225,7 +227,7 @@ export default {
         wifInput.value = "";
         startBalanceWatch();
       } catch (error) {
-        connectionError.value = `Error al importar wallet: ${error.message}`;
+        connectionError.value = t('lobby.walletImportError', { message: error.message });
         console.error(error);
       } finally {
         isConnecting.value = false;
@@ -251,7 +253,7 @@ export default {
     const copyWIF = async () => {
       try {
         await navigator.clipboard.writeText(exportedWIF.value);
-        alert("WIF copiado al portapapeles");
+        alert(t('lobby.wifCopied'));
       } catch (error) {
         console.error("Error al copiar:", error);
       }
@@ -276,15 +278,15 @@ export default {
       sendResult.value = "";
 
       if (!sendAddress.value) {
-        sendError.value = "Ingresa una dirección destino";
+        sendError.value = t('lobby.enterDestAddress');
         return;
       }
       if (!sendAmount.value || sendAmount.value <= 0) {
-        sendError.value = "Ingresa una cantidad válida";
+        sendError.value = t('lobby.enterValidAmount');
         return;
       }
       if (sendAmount.value > balance.value) {
-        sendError.value = "Balance insuficiente";
+        sendError.value = t('lobby.insufficientBalance');
         return;
       }
 
@@ -297,7 +299,7 @@ export default {
         await updateBalance();
         startBalanceWatch();
       } catch (error) {
-        sendError.value = `Error al enviar: ${error.message}`;
+        sendError.value = t('lobby.sendError', { message: error.message });
         console.error("Error enviando BCH:", error);
       } finally {
         isSending.value = false;
@@ -327,15 +329,15 @@ export default {
     // Funciones del lobby
     const createLobbyEntry = async () => {
       if (!betAmount.value || betAmount.value <= 0) {
-        alert("Ingresa una cantidad valida");
+        alert(t('lobby.enterValidAmountAlert'));
         return;
       }
       if (!playerAddress.value) {
-        alert("Conecta tu wallet primero.");
+        alert(t('lobby.connectWalletFirst'));
         return;
       }
       if (betAmount.value > balance.value) {
-        alert("Balance insuficiente");
+        alert(t('lobby.insufficientBalanceAlert'));
         return;
       }
 
@@ -345,16 +347,16 @@ export default {
       });
 
       currentPlayerId.value = playerId;
-      alert("Partida publicada! Esperando oponente...");
+      alert(t('lobby.gamePublished'));
     };
 
     const joinGame = async (game) => {
       if (!playerAddress.value) {
-        alert("Conecta tu wallet primero.");
+        alert(t('lobby.connectWalletFirst'));
         return;
       }
       if (game.amount > balance.value) {
-        alert("Balance insuficiente para esta apuesta");
+        alert(t('lobby.insufficientBalanceForBet'));
         return;
       }
 
@@ -373,7 +375,7 @@ export default {
         game.amount
       );
 
-      alert(`Partida creada! ID: ${matchId}`);
+      alert(t('lobby.gameCreated', { matchId }));
       emit("match-created", matchId);
     };
 
