@@ -2,7 +2,12 @@
   <div class="game-lobby">
     <h2>Lobby de Juego</h2>
 
-    <div v-if="!playerAddress" class="wallet-section">
+    <div v-if="isLoadingWallet" class="loading-section">
+      <div class="spinner"></div>
+      <p>Cargando wallet...</p>
+    </div>
+
+    <div v-else-if="!playerAddress" class="wallet-section">
       <div class="wallet-options">
         <h3>Conectar Wallet</h3>
         <p class="network-badge" :class="{ testnet: isTestnet }">
@@ -161,6 +166,7 @@ export default {
     const isSending = ref(false);
     const sendResult = ref("");
     const sendError = ref("");
+    const isLoadingWallet = ref(false);
 
     const explorerUrl = computed(() =>
       isTestnet.value
@@ -372,7 +378,7 @@ export default {
     };
 
     onMounted(async () => {
-      // Restaurar estado si la wallet ya está conectada
+      // Restaurar wallet: primero si ya está conectada en memoria, sino desde localStorage
       if (walletService.isConnected()) {
         try {
           playerAddress.value = walletService.getAddress();
@@ -381,6 +387,18 @@ export default {
           startBalanceWatch();
         } catch (error) {
           console.error("Error restaurando wallet:", error);
+        }
+      } else if (walletService.hasSavedWallet()) {
+        isLoadingWallet.value = true;
+        try {
+          const result = await walletService.getNamedWallet("rps-bch-player");
+          playerAddress.value = result.address;
+          balance.value = result.balance.bch;
+          startBalanceWatch();
+        } catch (error) {
+          console.error("Error cargando wallet guardada:", error);
+        } finally {
+          isLoadingWallet.value = false;
         }
       }
 
@@ -436,6 +454,7 @@ export default {
       sendResult,
       sendError,
       explorerUrl,
+      isLoadingWallet,
       createNewWallet,
       useNamedWallet,
       importWallet,
@@ -459,6 +478,27 @@ export default {
   margin: 0 auto;
   padding: 20px;
   color: #1a1a1a;
+}
+
+.loading-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 40px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #4caf50;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .wallet-section,

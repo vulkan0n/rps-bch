@@ -25,6 +25,7 @@ class WalletService {
     this.wallet = null;
     this.isTestnet = false; // Usar mainnet por defecto (BCH tiene tarifas muy bajas)
     this.balanceWatchCancel = null; // Referencia para cancelar el watcher
+    this.savedWalletKey = 'rps-bch-saved-wif';
   }
 
   /**
@@ -37,6 +38,9 @@ class WalletService {
     const WalletClass = this.isTestnet ? TestNetWallet : Wallet;
     this.wallet = await WalletClass.newRandom();
 
+    const storageKey = `${this.savedWalletKey}${this.isTestnet ? '-testnet' : ''}`;
+    localStorage.setItem(storageKey, this.wallet.privateKeyWif);
+
     return {
       address: this.wallet.getDepositAddress(),
       balance: await this.getBalance(),
@@ -45,14 +49,28 @@ class WalletService {
 
   /**
    * Crear o recuperar una wallet nombrada (persistente)
-   * Se guarda en IndexedDB del navegador
+   * Intenta IndexedDB primero, fallback a localStorage con WIF
    * @param {string} name - Nombre unico para la wallet
    */
   async getNamedWallet(name = "rps-bch-wallet") {
     await initMainnet();
 
     const WalletClass = this.isTestnet ? TestNetWallet : Wallet;
-    this.wallet = await WalletClass.named(name);
+    const storageKey = `${this.savedWalletKey}${this.isTestnet ? '-testnet' : ''}`;
+
+    try {
+      this.wallet = await WalletClass.named(name);
+    } catch (e) {
+      console.warn("IndexedDB no disponible, usando localStorage:", e.message);
+      const savedWIF = localStorage.getItem(storageKey);
+      if (savedWIF) {
+        this.wallet = await WalletClass.fromWIF(savedWIF);
+      } else {
+        throw new Error("No se encontró una wallet guardada. Crea una nueva o importa un WIF.");
+      }
+    }
+
+    localStorage.setItem(storageKey, this.wallet.privateKeyWif);
 
     return {
       address: this.wallet.getDepositAddress(),
@@ -69,6 +87,9 @@ class WalletService {
 
     const WalletClass = this.isTestnet ? TestNetWallet : Wallet;
     this.wallet = await WalletClass.fromWIF(wif);
+
+    const storageKey = `${this.savedWalletKey}${this.isTestnet ? '-testnet' : ''}`;
+    localStorage.setItem(storageKey, this.wallet.privateKeyWif);
 
     return {
       address: this.wallet.getDepositAddress(),
@@ -202,6 +223,14 @@ class WalletService {
    */
   isConnected() {
     return this.wallet !== null;
+  }
+
+  /**
+   * Verificar si hay una wallet guardada en localStorage
+   */
+  hasSavedWallet() {
+    const storageKey = `${this.savedWalletKey}${this.isTestnet ? '-testnet' : ''}`;
+    return !!localStorage.getItem(storageKey);
   }
 
   /**
