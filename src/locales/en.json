@@ -14,6 +14,7 @@
     "importWifPlaceholder": "Import WIF (private key)",
     "import": "Import",
     "useTestnet": "Use TestNet (recommended for testing)",
+    "user": "User",
     "address": "Address",
     "balance": "Balance",
     "hideWif": "Hide WIF",

@@ -48,7 +48,30 @@
       <div class="player-info">
         <div class="address-row">
           <div class="address-details">
-            <p>{{ $t('lobby.address') }}: {{ shortAddress }}</p>
+            <p class="nickname-row">
+              {{ $t('lobby.user') }}:
+              <span v-if="!isEditingNickname" class="nickname-display">{{ nickname }}</span>
+              <input
+                v-else
+                ref="nicknameInput"
+                v-model="nickname"
+                type="text"
+                class="nickname-input"
+                maxlength="20"
+                @keyup.enter="saveAndCloseNickname"
+              />
+              <button class="nickname-btn" @click="toggleEditNickname">
+                <svg v-if="!isEditingNickname" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                  <path d="m15 5 4 4"/>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                  <polyline points="17 21 17 13 7 13 7 21"/>
+                  <polyline points="7 3 7 8 15 8"/>
+                </svg>
+              </button>
+            </p>
             <p class="full-address">{{ playerAddress }}</p>
             <p>{{ $t('lobby.balance') }}: {{ balance }} BCH</p>
           </div>
@@ -128,7 +151,7 @@
           {{ $t('lobby.noGames') }}
         </div>
         <div v-for="game in availableGames" :key="game.id" class="game-item">
-          <span>{{ game.address.slice(0, 15) }}...</span>
+          <span class="game-nickname">{{ game.nickname || game.address.slice(-10) }}</span>
           <span>{{ game.amount }} BCH</span>
           <button @click="joinGame(game)" :disabled="game.amount > balance">
             {{ $t('lobby.join') }}
@@ -140,7 +163,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
 import gunManager from "../lib/gun-manager";
 import walletService from "../lib/wallet-service";
@@ -153,6 +176,9 @@ export default {
   setup(props, { emit }) {
     const { t } = useI18n();
     const playerAddress = ref("");
+    const nickname = ref("");
+    const isEditingNickname = ref(false);
+    const nicknameInput = ref(null);
     const balance = ref(0);
     const betAmount = ref(0.001);
     const availableGames = ref([]);
@@ -178,11 +204,6 @@ export default {
         : "https://blockchair.com/bitcoin-cash/transaction/"
     );
 
-    const shortAddress = computed(() => {
-      if (!playerAddress.value) return "";
-      return `${playerAddress.value.slice(0, 15)}...${playerAddress.value.slice(-8)}`;
-    });
-
     const isWaiting = computed(() => currentPlayerId.value !== null);
 
     // Funciones de conexion de wallet
@@ -193,6 +214,7 @@ export default {
         const result = await walletService.createNewWallet();
         playerAddress.value = result.address;
         balance.value = result.balance.bch;
+        loadNickname(result.address);
         startBalanceWatch();
       } catch (error) {
         connectionError.value = t('lobby.walletCreateError', { message: error.message });
@@ -209,6 +231,7 @@ export default {
         const result = await walletService.getNamedWallet("rps-bch-player");
         playerAddress.value = result.address;
         balance.value = result.balance.bch;
+        loadNickname(result.address);
         startBalanceWatch();
       } catch (error) {
         connectionError.value = t('lobby.walletLoadError', { message: error.message });
@@ -227,6 +250,7 @@ export default {
         playerAddress.value = result.address;
         balance.value = result.balance.bch;
         wifInput.value = "";
+        loadNickname(result.address);
         startBalanceWatch();
       } catch (error) {
         connectionError.value = t('lobby.walletImportError', { message: error.message });
@@ -334,6 +358,36 @@ export default {
       });
     };
 
+    const loadNickname = (address) => {
+      gunManager.getNickname(address, (savedNickname) => {
+        nickname.value = savedNickname || address.slice(-10);
+      });
+    };
+
+    const saveNickname = () => {
+      if (playerAddress.value && nickname.value) {
+        gunManager.saveNickname(playerAddress.value, nickname.value);
+      }
+    };
+
+    const toggleEditNickname = async () => {
+      if (isEditingNickname.value) {
+        // Guardar y cerrar
+        saveNickname();
+        isEditingNickname.value = false;
+      } else {
+        // Abrir edición
+        isEditingNickname.value = true;
+        await nextTick();
+        nicknameInput.value?.focus();
+      }
+    };
+
+    const saveAndCloseNickname = () => {
+      saveNickname();
+      isEditingNickname.value = false;
+    };
+
     const updateBalance = async () => {
       if (walletService.isConnected()) {
         const result = await walletService.getBalance();
@@ -358,6 +412,7 @@ export default {
 
       const playerId = await gunManager.publishToLobby({
         address: playerAddress.value,
+        nickname: nickname.value,
         amount: betAmount.value,
       });
 
@@ -379,6 +434,7 @@ export default {
       if (!playerBId) {
         playerBId = await gunManager.publishToLobby({
           address: playerAddress.value,
+          nickname: nickname.value,
           amount: game.amount,
         });
         currentPlayerId.value = playerBId;
@@ -401,6 +457,7 @@ export default {
           playerAddress.value = walletService.getAddress();
           const balanceResult = await walletService.getBalance();
           balance.value = balanceResult.bch;
+          loadNickname(playerAddress.value);
           startBalanceWatch();
         } catch (error) {
           console.error("Error restaurando wallet:", error);
@@ -411,6 +468,7 @@ export default {
           const result = await walletService.getNamedWallet("rps-bch-player");
           playerAddress.value = result.address;
           balance.value = result.balance.bch;
+          loadNickname(result.address);
           startBalanceWatch();
         } catch (error) {
           console.error("Error cargando wallet guardada:", error);
@@ -453,10 +511,12 @@ export default {
 
     return {
       playerAddress,
+      nickname,
+      isEditingNickname,
+      nicknameInput,
       balance,
       betAmount,
       availableGames,
-      shortAddress,
       isWaiting,
       isConnecting,
       connectionError,
@@ -481,6 +541,9 @@ export default {
       toggleShowSend,
       fillMaxAmount,
       clearMaxFlag,
+      saveNickname,
+      toggleEditNickname,
+      saveAndCloseNickname,
       sendBCH,
       toggleNetwork,
       createLobbyEntry,
@@ -613,6 +676,54 @@ export default {
   font-size: 0.75rem;
   color: #333;
   font-family: monospace;
+}
+
+.nickname-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nickname-display {
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.nickname-input {
+  padding: 4px 8px;
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  width: 150px;
+  color: #1a1a1a;
+  font-weight: bold;
+}
+
+.nickname-input:focus {
+  outline: none;
+  border-color: #2e7d32;
+}
+
+.nickname-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.nickname-btn:hover {
+  color: #4caf50;
+  background: transparent;
+}
+
+.game-nickname {
+  font-weight: 500;
+  color: #1976d2;
 }
 
 .player-info p {

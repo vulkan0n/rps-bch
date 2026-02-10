@@ -6,6 +6,19 @@ class GunManager {
     this.gun = Gun([RENDER_RELAY_URL]);
     this.lobby = this.gun.get("rps-bch-lobby");
     this.matches = this.gun.get("rps-bch-matches");
+    this.users = this.gun.get("rps-bch-users");
+  }
+
+  // Guardar nickname de usuario
+  async saveNickname(address, nickname) {
+    await this.users.get(address).put({ nickname, updatedAt: Date.now() });
+  }
+
+  // Obtener nickname de usuario
+  getNickname(address, callback) {
+    this.users.get(address).once((data) => {
+      callback(data?.nickname || null);
+    });
   }
 
   // Publicar en el lobby
@@ -15,6 +28,7 @@ class GunManager {
 
     await this.lobby.get(playerId).put({
       address: playerData.address,
+      nickname: playerData.nickname || playerData.address.slice(-10),
       amount: playerData.amount,
       timestamp: Date.now(),
       status: "waiting",

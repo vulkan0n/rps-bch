@@ -14,6 +14,7 @@
     "importWifPlaceholder": "Importar WIF (clave privada)",
     "import": "Importar",
     "useTestnet": "Usar TestNet (recomendado para pruebas)",
+    "user": "Usuario",
     "address": "Direccion",
     "balance": "Balance",
     "hideWif": "Ocultar WIF",
