@@ -163,6 +163,26 @@ class WalletService {
   }
 
   /**
+   * Enviar el maximo BCH posible a una direccion (descontando fees)
+   * @param {string} toAddress - Direccion destino
+   * @returns {Promise<{txid: string, amount: number}>}
+   */
+  async sendMax(toAddress) {
+    if (!this.wallet) throw new Error("Wallet no conectada");
+
+    // Cancelar el watcher de balance si existe (evita conflicto de sockets)
+    await this.stopWatchingBalance();
+
+    const result = await this.wallet.sendMax(toAddress);
+
+    return {
+      txid: result.txId,
+      hex: result.hex,
+      balance: result.balance,
+    };
+  }
+
+  /**
    * Firmar un mensaje (util para verificar propiedad de la wallet)
    * @param {string} message - Mensaje a firmar
    * @returns {Promise<string>} Firma en formato base64

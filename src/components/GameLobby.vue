@@ -84,6 +84,7 @@
                 min="0.00001"
                 :placeholder="$t('lobby.amountPlaceholder')"
                 :disabled="isSending"
+                @input="clearMaxFlag"
               />
               <button class="max-btn" @click="fillMaxAmount" :disabled="isSending">
                 Max
@@ -165,6 +166,7 @@ export default {
     const showSend = ref(false);
     const sendAddress = ref("");
     const sendAmount = ref(null);
+    const isMaxAmount = ref(false);
     const isSending = ref(false);
     const sendResult = ref("");
     const sendError = ref("");
@@ -264,6 +266,7 @@ export default {
       if (!showSend.value) {
         sendAddress.value = "";
         sendAmount.value = null;
+        isMaxAmount.value = false;
         sendResult.value = "";
         sendError.value = "";
       }
@@ -271,6 +274,11 @@ export default {
 
     const fillMaxAmount = () => {
       sendAmount.value = balance.value;
+      isMaxAmount.value = true;
+    };
+
+    const clearMaxFlag = () => {
+      isMaxAmount.value = false;
     };
 
     const sendBCH = async () => {
@@ -292,10 +300,17 @@ export default {
 
       isSending.value = true;
       try {
-        const result = await walletService.send(sendAddress.value, sendAmount.value);
+        let result;
+        if (isMaxAmount.value) {
+          // Usar sendMax para enviar todo el balance menos el fee
+          result = await walletService.sendMax(sendAddress.value);
+        } else {
+          result = await walletService.send(sendAddress.value, sendAmount.value);
+        }
         sendResult.value = result.txId || result.txid || result;
         sendAddress.value = "";
         sendAmount.value = null;
+        isMaxAmount.value = false;
         await updateBalance();
         startBalanceWatch();
       } catch (error) {
@@ -465,6 +480,7 @@ export default {
       copyWIF,
       toggleShowSend,
       fillMaxAmount,
+      clearMaxFlag,
       sendBCH,
       toggleNetwork,
       createLobbyEntry,
