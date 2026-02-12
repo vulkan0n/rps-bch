@@ -3,7 +3,7 @@
     <header>
       <div class="lang-selector" v-click-outside="closeLangDropdown">
         <button class="lang-current" @click="langDropdownOpen = !langDropdownOpen">
-          <span class="lang-flag">{{ locale === 'en' ? '🇺🇸' : '🇪🇸' }}</span>
+          <img :src="currentFlag" class="lang-flag" alt="flag" />
           <span class="lang-code">{{ locale === 'en' ? 'EN' : 'ES' }}</span>
           <span class="lang-arrow">&#9662;</span>
         </button>
@@ -13,7 +13,7 @@
             :class="{ active: locale !== 'en' }"
             @click="setLocale(locale === 'en' ? 'es' : 'en')"
           >
-            <span class="lang-flag">{{ locale === 'en' ? '🇪🇸' : '🇺🇸' }}</span>
+            <img :src="otherFlag" class="lang-flag" alt="flag" />
             <span class="lang-code">{{ locale === 'en' ? 'ES' : 'EN' }}</span>
           </button>
         </div>
@@ -34,10 +34,12 @@
 </template>
 
 <script>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import GameLobby from "./components/GameLobby.vue";
 import GameRoom from "./components/GameRoom.vue";
+import flagEN from "@/assets/images/EN.png";
+import flagES from "@/assets/images/ES.png";
 
 export default {
   name: "App",
@@ -63,6 +65,9 @@ export default {
     const currentMatch = ref(null);
     const langDropdownOpen = ref(false);
 
+    const currentFlag = computed(() => locale.value === 'en' ? flagEN : flagES);
+    const otherFlag = computed(() => locale.value === 'en' ? flagES : flagEN);
+
     const setLocale = (lang) => {
       locale.value = lang;
       localStorage.setItem('rps-bch-locale', lang);
@@ -85,6 +90,8 @@ export default {
       locale,
       currentMatch,
       langDropdownOpen,
+      currentFlag,
+      otherFlag,
       setLocale,
       closeLangDropdown,
       handleMatchCreated,
@@ -159,8 +166,10 @@ header h1 {
 }
 
 .lang-flag {
-  font-size: 1.1rem;
-  line-height: 1;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .lang-code {
