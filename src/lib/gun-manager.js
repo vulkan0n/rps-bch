@@ -37,10 +37,25 @@ class GunManager {
     return playerId;
   }
 
-  // Escuchar cambios en el lobby
+  // Escuchar cambios en el lobby (ignora apuestas mayores a 24h)
   watchLobby(callback) {
+    const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 horas
+
     this.lobby.map().on((data, key) => {
-      if (data && data.status === "waiting") {
+      if (!data) return;
+
+      if (data.status === "waiting") {
+        const age = Date.now() - (data.timestamp || 0);
+        if (age < MAX_AGE_MS) {
+          callback({ ...data, id: key });
+        } else {
+          // Marcar como expirada si tiene más de 24h
+          this.lobby.get(key).put({ status: "expired" });
+          // Notificar para eliminar de la lista
+          callback({ ...data, id: key, status: "expired" });
+        }
+      } else {
+        // Notificar cambios de estado (matched, expired, etc.)
         callback({ ...data, id: key });
       }
     });
