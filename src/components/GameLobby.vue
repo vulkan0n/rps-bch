@@ -1,5 +1,25 @@
 <template>
   <div class="game-lobby">
+    <!-- Notificaciones -->
+    <div class="notifications-container">
+      <transition-group name="notification">
+        <div
+          v-for="notification in notifications"
+          :key="notification.id"
+          class="notification"
+          :class="notification.type"
+        >
+          <span class="notification-icon">
+            <svg v-if="notification.type === 'success'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <svg v-else-if="notification.type === 'error'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            <svg v-else-if="notification.type === 'warning'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </span>
+          <span class="notification-message">{{ notification.message }}</span>
+        </div>
+      </transition-group>
+    </div>
+
     <h2>{{ $t('lobby.title') }}</h2>
 
     <div v-if="isLoadingWallet" class="loading-section">
@@ -197,6 +217,15 @@ export default {
     const sendResult = ref("");
     const sendError = ref("");
     const isLoadingWallet = ref(false);
+    const notifications = ref([]);
+
+    const showNotification = (message, type = 'info') => {
+      const id = Date.now();
+      notifications.value.push({ id, message, type });
+      setTimeout(() => {
+        notifications.value = notifications.value.filter(n => n.id !== id);
+      }, 3000);
+    };
 
     const explorerUrl = computed(() =>
       isTestnet.value
@@ -279,7 +308,7 @@ export default {
     const copyWIF = async () => {
       try {
         await navigator.clipboard.writeText(exportedWIF.value);
-        alert(t('lobby.wifCopied'));
+        showNotification(t('lobby.wifCopied'), 'success');
       } catch (error) {
         console.error("Error al copiar:", error);
       }
@@ -398,15 +427,15 @@ export default {
     // Funciones del lobby
     const createLobbyEntry = async () => {
       if (!betAmount.value || betAmount.value <= 0) {
-        alert(t('lobby.enterValidAmountAlert'));
+        showNotification(t('lobby.enterValidAmountAlert'), 'warning');
         return;
       }
       if (!playerAddress.value) {
-        alert(t('lobby.connectWalletFirst'));
+        showNotification(t('lobby.connectWalletFirst'), 'warning');
         return;
       }
       if (betAmount.value > balance.value) {
-        alert(t('lobby.insufficientBalanceAlert'));
+        showNotification(t('lobby.insufficientBalanceAlert'), 'error');
         return;
       }
 
@@ -417,16 +446,16 @@ export default {
       });
 
       currentPlayerId.value = playerId;
-      alert(t('lobby.gamePublished'));
+      showNotification(t('lobby.gamePublished'), 'success');
     };
 
     const joinGame = async (game) => {
       if (!playerAddress.value) {
-        alert(t('lobby.connectWalletFirst'));
+        showNotification(t('lobby.connectWalletFirst'), 'warning');
         return;
       }
       if (game.amount > balance.value) {
-        alert(t('lobby.insufficientBalanceForBet'));
+        showNotification(t('lobby.insufficientBalanceForBet'), 'error');
         return;
       }
 
@@ -446,7 +475,7 @@ export default {
         game.amount
       );
 
-      alert(t('lobby.gameCreated', { matchId }));
+      showNotification(t('lobby.gameCreated', { matchId }), 'success');
       emit("match-created", matchId);
     };
 
@@ -515,6 +544,7 @@ export default {
       isEditingNickname,
       nicknameInput,
       balance,
+      notifications,
       betAmount,
       availableGames,
       isWaiting,
@@ -938,5 +968,93 @@ button:hover:not(:disabled) {
 button:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+/* Notificaciones */
+.notifications-container {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 350px;
+}
+
+.notification {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.notification.success {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.notification.error {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.notification.warning {
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  color: #856404;
+}
+
+.notification.info {
+  background: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
+.notification-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.notification-message {
+  flex: 1;
+}
+
+/* Animaciones */
+.notification-enter-active {
+  animation: slideIn 0.3s ease-out;
+}
+
+.notification-leave-active {
+  animation: slideOut 0.3s ease-in;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
 }
 </style>
