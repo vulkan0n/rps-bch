@@ -159,7 +159,7 @@
 
       <div class="create-game">
         <h3>{{ $t('lobby.createGame') }}</h3>
-        <input v-model="betAmount" type="number" step="0.001" min="0.001" :placeholder="$t('lobby.amountPlaceholder')" />
+        <input v-model="betAmount" type="number" step="0.0001" min="0.0001" :placeholder="$t('lobby.amountPlaceholder')" />
         <button @click="createLobbyEntry" :disabled="betAmount > balance">
           {{ $t('lobby.publishToLobby') }}
         </button>
@@ -200,7 +200,7 @@ export default {
     const isEditingNickname = ref(false);
     const nicknameInput = ref(null);
     const balance = ref(0);
-    const betAmount = ref(0.001);
+    const betAmount = ref(0.0001);
     const availableGames = ref([]);
     const currentPlayerId = ref(null);
     const isConnecting = ref(false);
