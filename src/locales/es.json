@@ -60,6 +60,7 @@
     "yourCommit": "Tu commit",
     "revealPhase": "Fase de Revelacion",
     "revealMove": "Revelar Jugada",
+    "waitingOpponentReveal": "Tu jugada fue revelada. Esperando al oponente...",
     "result": "Resultado",
     "you": "Tu",
     "opponent": "Oponente",

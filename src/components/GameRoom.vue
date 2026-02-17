@@ -37,8 +37,16 @@
       </div>
 
       <div v-else-if="gamePhase === 'revealing'" class="reveal-phase">
-        <h3>{{ $t('room.revealPhase') }}</h3>
-        <button @click="revealMove" class="reveal-btn">{{ $t('room.revealMove') }}</button>
+        <template v-if="!hasRevealed">
+          <h3>{{ $t('room.revealPhase') }}</h3>
+          <button @click="revealMove" class="reveal-btn">{{ $t('room.revealMove') }}</button>
+        </template>
+        <template v-else>
+          <div class="waiting-phase">
+            <div class="spinner"></div>
+            <p>{{ $t('room.waitingOpponentReveal') }}</p>
+          </div>
+        </template>
       </div>
 
       <div v-else-if="gamePhase === 'result'" class="result-phase">
@@ -133,6 +141,7 @@ export default {
     const paymentStatus = ref("");
     const paymentError = ref("");
     const paymentTxId = ref("");
+    const hasRevealed = ref(false);
 
     const explorerUrl = computed(() => {
       if (!paymentTxId.value) return "";
@@ -160,6 +169,7 @@ export default {
     };
 
     const revealMove = async () => {
+      hasRevealed.value = true;
       await gunManager.sendReveal(props.matchId, playerRole.value, playerMove.value, playerSecret.value);
       // El resultado se calculara cuando ambos reveals esten disponibles
     };
@@ -280,11 +290,12 @@ export default {
         }
 
         // Detectar reveals y calcular resultado
-        const opponentRevealed = data[opponentRevealMoveKey] !== undefined;
-        const playerRevealed = data[playerRevealMoveKey] !== undefined;
+        // Usar != null para cubrir tanto undefined como null (GunDB puede devolver null para valores falsy como 0)
+        const opponentRevealed = data[opponentRevealMoveKey] != null;
+        const playerRevealed = data[playerRevealMoveKey] != null;
 
         if (opponentRevealed && playerRevealed && gamePhase.value !== "result") {
-          const theirMove = data[opponentRevealMoveKey];
+          const theirMove = Number(data[opponentRevealMoveKey]);
           const theirSecret = data[opponentRevealSecretKey];
 
           // Verificar que el reveal del oponente coincide con su commit
@@ -311,6 +322,7 @@ export default {
       roleDetected,
       playerRole,
       matchData,
+      hasRevealed,
       paymentStatus,
       paymentError,
       paymentTxId,
