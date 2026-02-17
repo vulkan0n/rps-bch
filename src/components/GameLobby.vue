@@ -165,6 +165,21 @@
         </button>
       </div>
 
+      <div v-if="myGames.length > 0" class="my-games">
+        <h3>{{ $t('lobby.myGames') }}</h3>
+        <div v-for="game in myGames" :key="game.id" class="game-item">
+          <span>{{ game.amount }} BCH</span>
+          <button class="delete-btn" @click="cancelGame(game.id)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <div class="available-games">
         <h3>{{ $t('lobby.availableGames') }}</h3>
         <div v-if="availableGames.length === 0" class="no-games">
@@ -202,6 +217,7 @@ export default {
     const balance = ref(0);
     const betAmount = ref(0.0001);
     const availableGames = ref([]);
+    const myGames = ref([]);
     const currentPlayerId = ref(null);
     const isConnecting = ref(false);
     const connectionError = ref("");
@@ -487,6 +503,13 @@ export default {
       emit("match-created", matchId);
     };
 
+    const cancelGame = async (gameId) => {
+      await gunManager.cancelLobbyEntry(gameId);
+      if (currentPlayerId.value === gameId) {
+        currentPlayerId.value = null;
+      }
+    };
+
     onMounted(async () => {
       // Restaurar wallet: primero si ya está conectada en memoria, sino desde localStorage
       if (walletService.isConnected()) {
@@ -516,9 +539,20 @@ export default {
 
       // Escuchar cambios en el lobby
       gunManager.watchLobby((game) => {
-        if (game.address !== playerAddress.value && game.status === "waiting") {
+        if (game.address === playerAddress.value) {
+          // Own games
+          if (game.status === "waiting") {
+            const exists = myGames.value.findIndex((g) => g.id === game.id);
+            if (exists === -1) {
+              myGames.value.push(game);
+            } else {
+              myGames.value[exists] = game;
+            }
+          } else {
+            myGames.value = myGames.value.filter((g) => g.id !== game.id);
+          }
+        } else if (game.status === "waiting") {
           const exists = availableGames.value.findIndex((g) => g.id === game.id);
-
           if (exists === -1) {
             availableGames.value.push(game);
           } else {
@@ -555,6 +589,7 @@ export default {
       notifications,
       betAmount,
       availableGames,
+      myGames,
       isWaiting,
       isConnecting,
       connectionError,
@@ -586,6 +621,7 @@ export default {
       toggleNetwork,
       createLobbyEntry,
       joinGame,
+      cancelGame,
     };
   },
 };
@@ -932,6 +968,31 @@ export default {
   border: 1px solid #aaa;
   border-radius: 5px;
   color: #1a1a1a;
+}
+
+.my-games {
+  margin-top: 20px;
+}
+
+.my-games h3 {
+  margin-bottom: 10px;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  background: #ef5350;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  color: white;
+  transition: background 0.2s;
+}
+
+.delete-btn:hover {
+  background: #c62828;
 }
 
 .available-games {

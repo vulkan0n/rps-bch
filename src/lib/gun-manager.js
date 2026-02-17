@@ -75,6 +75,11 @@ class GunManager {
     });
   }
 
+  // Cancelar una entrada del lobby
+  async cancelLobbyEntry(entryId) {
+    await this.lobby.get(entryId).put({ status: "cancelled" });
+  }
+
   // Crear una partida
   async createMatch(playerA, playerB, amount) {
     const matchId = `match-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
