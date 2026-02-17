@@ -241,9 +241,9 @@ export default {
       connectionError.value = "";
       try {
         const result = await walletService.createNewWallet();
+        await loadNickname(result.address);
         playerAddress.value = result.address;
         balance.value = result.balance.bch;
-        loadNickname(result.address);
         startBalanceWatch();
       } catch (error) {
         connectionError.value = t('lobby.walletCreateError', { message: error.message });
@@ -258,9 +258,9 @@ export default {
       connectionError.value = "";
       try {
         const result = await walletService.getNamedWallet("rps-bch-player");
+        await loadNickname(result.address);
         playerAddress.value = result.address;
         balance.value = result.balance.bch;
-        loadNickname(result.address);
         startBalanceWatch();
       } catch (error) {
         connectionError.value = t('lobby.walletLoadError', { message: error.message });
@@ -276,10 +276,10 @@ export default {
       connectionError.value = "";
       try {
         const result = await walletService.importFromWIF(wifInput.value);
+        wifInput.value = "";
+        await loadNickname(result.address);
         playerAddress.value = result.address;
         balance.value = result.balance.bch;
-        wifInput.value = "";
-        loadNickname(result.address);
         startBalanceWatch();
       } catch (error) {
         connectionError.value = t('lobby.walletImportError', { message: error.message });
@@ -387,15 +387,23 @@ export default {
       });
     };
 
-    const loadNickname = (address) => {
-      gunManager.getNickname(address, (savedNickname) => {
-        nickname.value = savedNickname || address.slice(-10);
-      });
+    const loadNickname = async (address) => {
+      // Cargar inmediatamente desde localStorage como caché
+      const cached = localStorage.getItem(`rps-bch-nickname-${address}`);
+      nickname.value = cached || address.slice(-10);
+
+      // Esperar respuesta de GunDB (max 3s) y actualizar si hay diferencia
+      const savedNickname = await gunManager.getNickname(address);
+      if (savedNickname) {
+        nickname.value = savedNickname;
+        localStorage.setItem(`rps-bch-nickname-${address}`, savedNickname);
+      }
     };
 
     const saveNickname = () => {
       if (playerAddress.value && nickname.value) {
         gunManager.saveNickname(playerAddress.value, nickname.value);
+        localStorage.setItem(`rps-bch-nickname-${playerAddress.value}`, nickname.value);
       }
     };
 
@@ -486,7 +494,7 @@ export default {
           playerAddress.value = walletService.getAddress();
           const balanceResult = await walletService.getBalance();
           balance.value = balanceResult.bch;
-          loadNickname(playerAddress.value);
+          await loadNickname(playerAddress.value);
           startBalanceWatch();
         } catch (error) {
           console.error("Error restaurando wallet:", error);
@@ -497,7 +505,7 @@ export default {
           const result = await walletService.getNamedWallet("rps-bch-player");
           playerAddress.value = result.address;
           balance.value = result.balance.bch;
-          loadNickname(result.address);
+          await loadNickname(result.address);
           startBalanceWatch();
         } catch (error) {
           console.error("Error cargando wallet guardada:", error);

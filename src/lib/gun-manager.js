@@ -14,10 +14,24 @@ class GunManager {
     await this.users.get(address).put({ nickname, updatedAt: Date.now() });
   }
 
-  // Obtener nickname de usuario
-  getNickname(address, callback) {
-    this.users.get(address).once((data) => {
-      callback(data?.nickname || null);
+  // Obtener nickname de usuario (espera respuesta del relay con timeout)
+  getNickname(address, timeout = 3000) {
+    return new Promise((resolve) => {
+      let resolved = false;
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve(null);
+        }
+      }, timeout);
+
+      this.users.get(address).once((data) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          resolve(data?.nickname || null);
+        }
+      });
     });
   }
 
