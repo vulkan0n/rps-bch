@@ -9,9 +9,36 @@ class GunManager {
     this.users = this.gun.get("rps-bch-users");
   }
 
-  // Guardar nickname de usuario
-  async saveNickname(address, nickname) {
-    await this.users.get(address).put({ nickname, updatedAt: Date.now() });
+  // Guardar nickname de usuario (con firma opcional)
+  async saveNickname(address, nickname, signature) {
+    const data = { nickname, updatedAt: Date.now() };
+    if (signature) data.signature = signature;
+    await this.users.get(address).put(data);
+  }
+
+  // Verificar si un nickname ya está tomado por otro usuario (con firma)
+  isNicknameTaken(nickname, excludeAddress, timeout = 3000) {
+    const target = nickname.toLowerCase();
+    return new Promise((resolve) => {
+      let found = false;
+      const collected = new Set();
+
+      const timer = setTimeout(() => {
+        resolve(found);
+      }, timeout);
+
+      this.users.map().once((data, key) => {
+        if (!data || !data.nickname || !data.signature) return;
+        if (key === excludeAddress) return;
+        if (collected.has(key)) return;
+        collected.add(key);
+        if (data.nickname.toLowerCase() === target) {
+          found = true;
+          clearTimeout(timer);
+          resolve(true);
+        }
+      });
+    });
   }
 
   // Obtener nickname de usuario (espera respuesta del relay con timeout)
@@ -21,7 +48,7 @@ class GunManager {
       const timer = setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          resolve(null);
+          resolve({ nickname: null, signature: null });
         }
       }, timeout);
 
@@ -29,7 +56,7 @@ class GunManager {
         if (!resolved) {
           resolved = true;
           clearTimeout(timer);
-          resolve(data?.nickname || null);
+          resolve({ nickname: data?.nickname || null, signature: data?.signature || null });
         }
       });
     });

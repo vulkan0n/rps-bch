@@ -79,19 +79,33 @@
                 class="nickname-input"
                 maxlength="20"
                 @keyup.enter="saveAndCloseNickname"
+                @keyup.escape="cancelNicknameEdit"
               />
-              <button class="nickname-btn" @click="toggleEditNickname">
-                <svg v-if="!isEditingNickname" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <button v-if="!isNicknameLocked && !isEditingNickname" class="nickname-btn" @click="toggleEditNickname">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                   <path d="m15 5 4 4"/>
                 </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              </button>
+              <button v-if="isEditingNickname" class="nickname-btn" @click="toggleEditNickname">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                   <polyline points="17 21 17 13 7 13 7 21"/>
                   <polyline points="7 3 7 8 15 8"/>
                 </svg>
               </button>
+              <svg v-if="isNicknameLocked && !isEditingNickname" class="locked-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
             </p>
+            <div v-if="showNicknameConfirm" class="nickname-confirm">
+              <p class="nickname-confirm-warning">{{ $t('lobby.nicknameWarning') }}</p>
+              <div class="nickname-confirm-actions">
+                <button class="confirm-btn" @click="signAndSaveNickname">{{ $t('lobby.nicknameConfirm') }}</button>
+                <button class="cancel-btn" @click="cancelNicknameEdit">{{ $t('lobby.nicknameCancel') }}</button>
+              </div>
+            </div>
             <p class="full-address">{{ playerAddress }}</p>
             <p>{{ $t('lobby.balance') }}: {{ balance }} BCH</p>
           </div>
@@ -234,6 +248,9 @@ export default {
     const sendError = ref("");
     const isLoadingWallet = ref(false);
     const notifications = ref([]);
+    const isNicknameLocked = ref(false);
+    const showNicknameConfirm = ref(false);
+    const previousNickname = ref("");
 
     const showNotification = (message, type = 'info') => {
       const id = Date.now();
@@ -406,39 +423,66 @@ export default {
     const loadNickname = async (address) => {
       // Cargar inmediatamente desde localStorage como caché
       const cached = localStorage.getItem(`rps-bch-nickname-${address}`);
+      const cachedLocked = localStorage.getItem(`rps-bch-nickname-locked-${address}`);
       nickname.value = cached || address.slice(-10);
+      isNicknameLocked.value = cachedLocked === 'true';
 
       // Esperar respuesta de GunDB (max 3s) y actualizar si hay diferencia
-      const savedNickname = await gunManager.getNickname(address);
-      if (savedNickname) {
-        nickname.value = savedNickname;
-        localStorage.setItem(`rps-bch-nickname-${address}`, savedNickname);
+      const result = await gunManager.getNickname(address);
+      if (result.nickname) {
+        nickname.value = result.nickname;
+        localStorage.setItem(`rps-bch-nickname-${address}`, result.nickname);
+      }
+      if (result.signature) {
+        isNicknameLocked.value = true;
+        localStorage.setItem(`rps-bch-nickname-locked-${address}`, 'true');
       }
     };
 
-    const saveNickname = () => {
-      if (playerAddress.value && nickname.value) {
-        gunManager.saveNickname(playerAddress.value, nickname.value);
+    const signAndSaveNickname = async () => {
+      if (!playerAddress.value || !nickname.value) return;
+      try {
+        const taken = await gunManager.isNicknameTaken(nickname.value, playerAddress.value);
+        if (taken) {
+          showNotification(t('lobby.nicknameTaken'), 'error');
+          return;
+        }
+        const signature = await walletService.signMessage(nickname.value);
+        await gunManager.saveNickname(playerAddress.value, nickname.value, signature);
         localStorage.setItem(`rps-bch-nickname-${playerAddress.value}`, nickname.value);
+        localStorage.setItem(`rps-bch-nickname-locked-${playerAddress.value}`, 'true');
+        isNicknameLocked.value = true;
+        isEditingNickname.value = false;
+        showNicknameConfirm.value = false;
+        showNotification(t('lobby.nicknameWarning'), 'success');
+      } catch (error) {
+        console.error("Error signing nickname:", error);
+        showNotification(error.message, 'error');
       }
     };
 
     const toggleEditNickname = async () => {
       if (isEditingNickname.value) {
-        // Guardar y cerrar
-        saveNickname();
-        isEditingNickname.value = false;
+        // Mostrar modal de confirmación antes de firmar
+        showNicknameConfirm.value = true;
       } else {
         // Abrir edición
+        previousNickname.value = nickname.value;
         isEditingNickname.value = true;
         await nextTick();
         nicknameInput.value?.focus();
       }
     };
 
-    const saveAndCloseNickname = () => {
-      saveNickname();
+    const cancelNicknameEdit = () => {
+      nickname.value = previousNickname.value;
       isEditingNickname.value = false;
+      showNicknameConfirm.value = false;
+    };
+
+    const saveAndCloseNickname = () => {
+      // Enter key triggers confirmation modal
+      showNicknameConfirm.value = true;
     };
 
     const updateBalance = async () => {
@@ -614,7 +658,10 @@ export default {
       toggleShowSend,
       fillMaxAmount,
       clearMaxFlag,
-      saveNickname,
+      isNicknameLocked,
+      showNicknameConfirm,
+      signAndSaveNickname,
+      cancelNicknameEdit,
       toggleEditNickname,
       saveAndCloseNickname,
       sendBCH,
@@ -793,6 +840,50 @@ export default {
 .nickname-btn:hover {
   color: #4caf50;
   background: transparent;
+}
+
+.locked-icon {
+  color: #ff9800;
+  flex-shrink: 0;
+}
+
+.nickname-confirm {
+  margin-top: 10px;
+  padding: 10px;
+  background: #fff8e1;
+  border: 1px solid #ffb300;
+  border-radius: 5px;
+}
+
+.nickname-confirm-warning {
+  color: #e65100;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+.nickname-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-btn {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  background: #4caf50;
+}
+
+.confirm-btn:hover {
+  background: #388e3c;
+}
+
+.cancel-btn {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  background: #9e9e9e;
+}
+
+.cancel-btn:hover {
+  background: #757575;
 }
 
 .game-nickname {

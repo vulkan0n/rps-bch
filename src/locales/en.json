@@ -49,7 +49,11 @@
     "gameCreated": "Game created! ID: {matchId}",
     "walletCreateError": "Error creating wallet: {message}",
     "walletLoadError": "Error loading wallet: {message}",
-    "walletImportError": "Error importing wallet: {message}"
+    "walletImportError": "Error importing wallet: {message}",
+    "nicknameWarning": "Once signed, your nickname cannot be changed.",
+    "nicknameConfirm": "Sign and Save",
+    "nicknameCancel": "Cancel",
+    "nicknameTaken": "This nickname is already taken."
   },
   "room": {
     "title": "Game Room",

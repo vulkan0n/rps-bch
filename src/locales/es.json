@@ -49,7 +49,11 @@
     "gameCreated": "Partida creada! ID: {matchId}",
     "walletCreateError": "Error al crear wallet: {message}",
     "walletLoadError": "Error al cargar wallet: {message}",
-    "walletImportError": "Error al importar wallet: {message}"
+    "walletImportError": "Error al importar wallet: {message}",
+    "nicknameWarning": "Una vez firmado, tu nickname no podra ser cambiado.",
+    "nicknameConfirm": "Firmar y Guardar",
+    "nicknameCancel": "Cancelar",
+    "nicknameTaken": "Este nickname ya esta en uso."
   },
   "room": {
     "title": "Sala de Juego",
