@@ -44,10 +44,6 @@
     <div v-else-if="!playerAddress" class="wallet-section">
       <div class="wallet-options">
         <h3>{{ $t('lobby.connectWallet') }}</h3>
-        <p class="network-badge" :class="{ testnet: isTestnet }">
-          {{ isTestnet ? 'TestNet' : 'MainNet' }}
-        </p>
-
         <button @click="createNewWallet" :disabled="isConnecting">
           {{ isConnecting ? $t('lobby.connecting') : $t('lobby.createNewWallet') }}
         </button>
@@ -67,10 +63,6 @@
           </button>
         </div>
 
-        <label class="testnet-toggle">
-          <input type="checkbox" v-model="isTestnet" @change="toggleNetwork" />
-          {{ $t('lobby.useTestnet') }}
-        </label>
       </div>
 
       <div v-if="connectionError" class="error-message">
@@ -178,11 +170,6 @@
             {{ sendError }}
           </div>
         </div>
-      </div>
-
-      <div v-if="isTestnet" class="testnet-notice">
-        {{ $t('lobby.testnetNotice') }}
-        <a href="https://tbch.googol.cash/" target="_blank">tbch.googol.cash</a>
       </div>
 
       <div class="create-game">
@@ -494,13 +481,6 @@ export default {
       }
     };
 
-    const toggleNetwork = () => {
-      walletService.setTestnet(isTestnet.value);
-      if (playerAddress.value) {
-        disconnectWallet();
-      }
-    };
-
     const startBalanceWatch = () => {
       walletService.watchBalance(async (newBalance) => {
         balance.value = Number(newBalance) / 100_000_000;
@@ -799,7 +779,6 @@ export default {
       toggleEditNickname,
       saveAndCloseNickname,
       sendBCH,
-      toggleNetwork,
       createLobbyEntry,
       joinGame,
       cancelGame,
@@ -995,27 +974,6 @@ export default {
   margin-bottom: 4px;
 }
 
-.network-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: normal;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  border-radius: var(--radius);
-  background: var(--green-glow);
-  color: var(--green);
-  border: 1px solid var(--green);
-  width: fit-content;
-}
-
-.network-badge.testnet {
-  background: var(--amber-glow);
-  color: var(--amber);
-  border-color: var(--amber);
-}
 
 .import-section {
   display: flex;
@@ -1027,25 +985,6 @@ export default {
   flex: 1;
 }
 
-.testnet-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 4px;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  cursor: pointer;
-  letter-spacing: 0.06em;
-}
-
-.testnet-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--amber);
-  min-height: unset;
-}
 
 .error-message {
   background: var(--red-glow);
@@ -1351,22 +1290,6 @@ export default {
   font-size: 0.78rem;
 }
 
-/* === TESTNET NOTICE === */
-.testnet-notice {
-  background: var(--amber-glow);
-  border: 1px solid var(--amber);
-  padding: 10px 14px;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--amber);
-  letter-spacing: 0.04em;
-}
-
-.testnet-notice a {
-  color: var(--amber-dim);
-  text-decoration: underline;
-  font-weight: bold;
-}
 
 /* === CREATE GAME === */
 .create-game {
