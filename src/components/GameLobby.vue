@@ -206,6 +206,22 @@
         </div>
       </div>
 
+      <div v-if="activeMatches.length > 0" class="active-matches">
+        <h3>{{ $t('lobby.activeMatches') }}</h3>
+        <ActiveMatch
+          v-for="match in activeMatches"
+          :key="match.matchId"
+          :match-id="match.matchId"
+          :player-address="playerAddress"
+          :nickname="nickname"
+          :opponent-nickname="match.opponentNickname"
+          :bet-amount="match.betAmount"
+          :is-testnet="isTestnet"
+          @match-finished="handleMatchFinished"
+          @payment-complete="startBalanceWatch"
+        />
+      </div>
+
       <div class="available-games">
         <h3>{{ $t('lobby.availableGames') }}</h3>
         <div v-if="availableGames.length === 0" class="no-games">
@@ -262,12 +278,12 @@ import { useI18n } from "vue-i18n";
 import gunManager from "../lib/gun-manager";
 import walletService from "../lib/wallet-service";
 import QrCode from "./QrCode.vue";
+import ActiveMatch from "./ActiveMatch.vue";
 
 export default {
   name: "GameLobby",
-  components: { QrCode },
-  emits: ["match-created"],
-  setup(props, { emit }) {
+  components: { QrCode, ActiveMatch },
+  setup() {
     const { t } = useI18n();
     const playerAddress = ref("");
     const nickname = ref("");
@@ -299,6 +315,7 @@ export default {
     const activeTab = ref("lobby");
     const leaderboardEntries = ref([]);
     const isLoadingLeaderboard = ref(false);
+    const activeMatches = ref([]);
 
     const switchToLeaderboard = async () => {
       activeTab.value = "leaderboard";
@@ -599,12 +616,19 @@ export default {
 
       const matchId = await gunManager.createMatch(
         game,
-        { id: playerBId, address: playerAddress.value },
+        { id: playerBId, address: playerAddress.value, nickname: nickname.value },
         game.amount
       );
 
+      // Clear before watcher can fire a duplicate
+      currentPlayerId.value = null;
+
       showNotification(t('lobby.gameCreated', { matchId }), 'success');
-      emit("match-created", matchId);
+      activeMatches.value.push({
+        matchId,
+        opponentNickname: game.nickname || game.address.slice(-10),
+        betAmount: game.amount,
+      });
     };
 
     const cancelGame = async (gameId) => {
@@ -671,13 +695,41 @@ export default {
       setInterval(updateBalance, 30000);
     });
 
+    const handleMatchFinished = (matchId) => {
+      activeMatches.value = activeMatches.value.filter(
+        (m) => m.matchId !== matchId
+      );
+    };
+
     // Detectar cuando el jugador A es seleccionado para una partida
     watch(currentPlayerId, (newId) => {
       if (newId) {
+        let matched = false;
         gunManager.lobby.get(newId).on((data, key) => {
-          if (data && data.status === "matched") {
+          if (data && data.status === "matched" && !matched) {
+            matched = true;
             console.log(`Jugador A detecta partida ${data.matchId}`);
-            emit("match-created", data.matchId);
+
+            // Capture bet amount before async callback clears myGames
+            const myGame = myGames.value.find((g) => g.id === newId);
+            const betAmount = myGame ? myGame.amount : 0;
+
+            // Resolve opponent nickname from match data
+            gunManager.matches.get(data.matchId).once((matchInfo) => {
+              if (activeMatches.value.some((m) => m.matchId === data.matchId)) return;
+              const opNick = matchInfo && matchInfo.playerB !== playerAddress.value
+                ? (matchInfo.nicknameB || matchInfo.playerB?.slice(-10) || "???")
+                : (matchInfo?.nicknameA || matchInfo?.playerA?.slice(-10) || "???");
+              activeMatches.value.push({
+                matchId: data.matchId,
+                opponentNickname: opNick,
+                betAmount,
+              });
+            });
+
+            // Clean up
+            myGames.value = myGames.value.filter((g) => g.id !== newId);
+            currentPlayerId.value = null;
             gunManager.lobby.get(newId).off();
           }
         });
@@ -733,6 +785,9 @@ export default {
       leaderboardEntries,
       isLoadingLeaderboard,
       switchToLeaderboard,
+      activeMatches,
+      handleMatchFinished,
+      startBalanceWatch,
     };
   },
 };

@@ -53,7 +53,8 @@
     "nicknameWarning": "Una vez firmado, tu nickname no podra ser cambiado.",
     "nicknameConfirm": "Firmar y Guardar",
     "nicknameCancel": "Cancelar",
-    "nicknameTaken": "Este nickname ya esta en uso."
+    "nicknameTaken": "Este nickname ya esta en uso.",
+    "activeMatches": "Partidas Activas"
   },
   "room": {
     "title": "Sala de Juego",
@@ -89,6 +90,21 @@
     "noEntries": "No se han jugado partidas aun",
     "player": "Jugador",
     "wins": "Victorias"
+  },
+  "match": {
+    "connecting": "Conectando...",
+    "opponentChosen": "El oponente ya eligio",
+    "waitingOpponent": "Esperando al oponente...",
+    "resolving": "Determinando ganador...",
+    "youWin": "Ganaste!",
+    "youLose": "Perdiste",
+    "draw": "Empate!",
+    "opponentCheated": "El oponente hizo trampa!",
+    "sendingPayment": "Enviando pago...",
+    "paymentSent": "Pago enviado",
+    "waitingPayment": "Esperando pago...",
+    "paymentReceived": "Pago recibido!",
+    "paymentError": "Error de pago: {message}"
   },
   "moves": {
     "rock": "Piedra",

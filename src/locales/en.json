@@ -53,7 +53,8 @@
     "nicknameWarning": "Once signed, your nickname cannot be changed.",
     "nicknameConfirm": "Sign and Save",
     "nicknameCancel": "Cancel",
-    "nicknameTaken": "This nickname is already taken."
+    "nicknameTaken": "This nickname is already taken.",
+    "activeMatches": "Active Matches"
   },
   "room": {
     "title": "Game Room",
@@ -89,6 +90,21 @@
     "noEntries": "No games played yet",
     "player": "Player",
     "wins": "Wins"
+  },
+  "match": {
+    "connecting": "Connecting...",
+    "opponentChosen": "Opponent has chosen",
+    "waitingOpponent": "Waiting for opponent...",
+    "resolving": "Determining winner...",
+    "youWin": "You win!",
+    "youLose": "You lose",
+    "draw": "Draw!",
+    "opponentCheated": "Opponent cheated!",
+    "sendingPayment": "Sending payment...",
+    "paymentSent": "Payment sent",
+    "waitingPayment": "Waiting for payment...",
+    "paymentReceived": "Payment received!",
+    "paymentError": "Payment error: {message}"
   },
   "moves": {
     "rock": "Rock",

@@ -117,6 +117,8 @@ class GunManager {
       id: matchId,
       playerA: playerA.address,
       playerB: playerB.address,
+      nicknameA: playerA.nickname || playerA.address.slice(-10),
+      nicknameB: playerB.nickname || playerB.address.slice(-10),
       amount: amount,
       status: "created",
       createdAt: Date.now(),

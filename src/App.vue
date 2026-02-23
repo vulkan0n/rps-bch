@@ -23,8 +23,7 @@
     </header>
 
     <main>
-      <GameLobby v-if="!currentMatch" @match-created="handleMatchCreated" />
-      <GameRoom v-else :match-id="currentMatch" @match-ended="handleMatchEnded" />
+      <GameLobby />
     </main>
 
     <footer>
@@ -37,7 +36,6 @@
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import GameLobby from "./components/GameLobby.vue";
-import GameRoom from "./components/GameRoom.vue";
 import flagEN from "@/assets/images/EN.png";
 import flagES from "@/assets/images/ES.png";
 
@@ -45,7 +43,6 @@ export default {
   name: "App",
   components: {
     GameLobby,
-    GameRoom,
   },
   directives: {
     'click-outside': {
@@ -62,7 +59,6 @@ export default {
   },
   setup() {
     const { locale } = useI18n();
-    const currentMatch = ref(null);
     const langDropdownOpen = ref(false);
 
     const currentFlag = computed(() => locale.value === 'en' ? flagEN : flagES);
@@ -78,24 +74,13 @@ export default {
       langDropdownOpen.value = false;
     };
 
-    const handleMatchCreated = (matchId) => {
-      currentMatch.value = matchId;
-    };
-
-    const handleMatchEnded = () => {
-      currentMatch.value = null;
-    };
-
     return {
       locale,
-      currentMatch,
       langDropdownOpen,
       currentFlag,
       otherFlag,
       setLocale,
       closeLangDropdown,
-      handleMatchCreated,
-      handleMatchEnded,
     };
   },
 };
