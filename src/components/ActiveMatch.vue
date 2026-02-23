@@ -330,142 +330,217 @@ export default {
 </script>
 
 <style scoped>
+/* ===================================================
+   ACTIVE MATCH — NEON-NOIR FIGHT CARD
+   =================================================== */
+
 .active-match {
-  background: white;
-  border-radius: 8px;
-  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-left: 3px solid var(--border-bright);
+  padding: 14px 16px;
   margin-bottom: 10px;
-  border-left: 4px solid #e0e0e0;
-  color: #1a1a1a;
+  color: var(--text);
+  font-family: var(--font-body);
+  transition: border-left-color 0.4s, box-shadow 0.4s;
+  animation: matchReveal 0.4s ease-out;
+}
+
+@keyframes matchReveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .active-match.result-win {
-  border-left-color: #4caf50;
+  border-left-color: var(--green);
+  box-shadow: inset 3px 0 16px rgba(0, 255, 136, 0.08), 0 0 16px rgba(0, 255, 136, 0.06);
 }
 
 .active-match.result-lose {
-  border-left-color: #ef5350;
+  border-left-color: var(--red);
+  box-shadow: inset 3px 0 16px rgba(255, 34, 68, 0.08), 0 0 16px rgba(255, 34, 68, 0.06);
 }
 
 .active-match.result-draw {
-  border-left-color: #ff9800;
+  border-left-color: var(--amber);
+  box-shadow: inset 3px 0 16px rgba(255, 170, 0, 0.08);
 }
 
+/* === MATCH HEADER === */
 .match-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
 }
 
 .opponent-name {
-  font-weight: 600;
-  color: #1a1a1a;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+
+.opponent-name::before {
+  content: 'VS ';
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--red);
+  letter-spacing: 0.12em;
+  margin-right: 2px;
 }
 
 .bet-amount {
-  font-weight: 500;
-  color: #555;
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--amber);
+  text-shadow: 0 0 6px rgba(255, 170, 0, 0.3);
 }
 
+/* === MATCH BODY === */
 .match-body {
   min-height: 40px;
 }
 
+/* === PHASE: CONNECTING / WAITING / RESOLVING === */
 .phase-connecting,
 .phase-waiting,
 .phase-resolving {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #666;
-  font-size: 0.9rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .spinner-small {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #e0e0e0;
-  border-top-color: #764ba2;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-bright);
+  border-top-color: var(--green);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+/* === PHASE: SELECTING === */
 .move-buttons {
   display: flex;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .move-btn {
   font-size: 1.8rem;
-  padding: 8px 14px;
-  background: #f5f5f5;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
+  padding: 10px 16px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 56px;
+  min-width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .move-btn:hover {
-  border-color: #764ba2;
-  background: #f3e5f5;
-  transform: scale(1.1);
+  border-color: var(--green);
+  background: var(--green-glow);
+  transform: scale(1.06) translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 255, 136, 0.2), 0 0 0 1px rgba(0, 255, 136, 0.3);
 }
 
 .opponent-status {
-  font-size: 0.85rem;
-  color: #4caf50;
-  font-style: italic;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--green);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
 }
 
+/* === PHASE: RESULT === */
 .phase-result {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .result-moves {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
 
 .result-move {
-  font-size: 1.6rem;
+  font-size: 2rem;
 }
 
 .result-vs {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #999;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: normal;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .result-text {
-  font-weight: 700;
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  letter-spacing: 0.1em;
 }
 
+.active-match.result-win .result-text {
+  color: var(--green);
+  text-shadow: 0 0 14px rgba(0, 255, 136, 0.5);
+}
+
+.active-match.result-lose .result-text {
+  color: var(--red);
+  text-shadow: 0 0 14px rgba(255, 34, 68, 0.4);
+}
+
+.active-match.result-draw .result-text {
+  color: var(--amber);
+  text-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
+}
+
+/* === PAYMENT INFO === */
 .payment-info {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
-  color: #666;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
 }
 
 .tx-link {
-  color: #1565c0;
+  color: var(--green);
   text-decoration: underline;
+  font-size: 0.72rem;
 }
 
 .tx-link:hover {
-  color: #0d47a1;
+  color: var(--green-dim);
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
 }
 </style>
