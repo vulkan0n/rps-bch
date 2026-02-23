@@ -180,20 +180,29 @@ export default {
       const moveB = playerRole.value === "A" ? theirMove : myMove;
       const winner = determineWinner(moveA, moveB);
 
+      let result;
       if (winner === "draw") {
         resultMessage.value = t('room.draw');
+        result = "draw";
       } else if (
         (playerRole.value === "A" && winner === "playerA") ||
         (playerRole.value === "B" && winner === "playerB")
       ) {
         resultMessage.value = t('room.youWin');
+        result = "win";
         // El oponente debe pagarme - esperamos que su cliente lo haga
         paymentStatus.value = "waiting_payment";
       } else {
         resultMessage.value = t('room.youLose');
+        result = "loss";
         // Yo perdí, debo pagar al ganador
         await processPayment();
       }
+
+      // Registrar resultado en el leaderboard (fire-and-forget)
+      const address = walletService.getAddress();
+      const nick = localStorage.getItem(`rps-bch-nickname-${address}`) || address.slice(-10);
+      gunManager.recordResult(address, nick, result);
 
       gamePhase.value = "result";
     };

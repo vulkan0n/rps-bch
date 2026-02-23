@@ -83,6 +83,13 @@
     "paymentError": "Error al enviar pago: {message}",
     "matchDataError": "Error: datos del match no disponibles"
   },
+  "leaderboard": {
+    "title": "Clasificacion",
+    "loading": "Cargando clasificacion...",
+    "noEntries": "No se han jugado partidas aun",
+    "player": "Jugador",
+    "wins": "Victorias"
+  },
   "moves": {
     "rock": "Piedra",
     "paper": "Papel",

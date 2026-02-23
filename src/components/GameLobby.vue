@@ -20,8 +20,20 @@
       </transition-group>
     </div>
 
-    <h2>{{ $t('lobby.title') }}</h2>
+    <div class="tab-selector">
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'lobby' }"
+        @click="activeTab = 'lobby'"
+      >{{ $t('lobby.title') }}</button>
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'leaderboard' }"
+        @click="switchToLeaderboard"
+      >{{ $t('leaderboard.title') }}</button>
+    </div>
 
+    <div v-show="activeTab === 'lobby'">
     <div v-if="isLoadingWallet" class="loading-section">
       <div class="spinner"></div>
       <p>{{ $t('lobby.loadingWallet') }}</p>
@@ -208,6 +220,39 @@
         </div>
       </div>
     </div>
+    </div>
+
+    <div v-if="activeTab === 'leaderboard'" class="leaderboard-section">
+      <div v-if="isLoadingLeaderboard" class="loading-section">
+        <div class="spinner"></div>
+        <p>{{ $t('leaderboard.loading') }}</p>
+      </div>
+      <div v-else-if="leaderboardEntries.length === 0" class="no-games">
+        {{ $t('leaderboard.noEntries') }}
+      </div>
+      <div v-else class="leaderboard-list">
+        <div class="leaderboard-header">
+          <span class="lb-rank">#</span>
+          <span class="lb-player">{{ $t('leaderboard.player') }}</span>
+          <span class="lb-wins">{{ $t('leaderboard.wins') }}</span>
+        </div>
+        <div
+          v-for="(entry, index) in leaderboardEntries"
+          :key="entry.address"
+          class="leaderboard-item"
+          :class="{
+            'is-me': entry.address === playerAddress,
+            'rank-1': index === 0,
+            'rank-2': index === 1,
+            'rank-3': index === 2
+          }"
+        >
+          <span class="lb-rank">{{ index + 1 }}</span>
+          <span class="lb-player">{{ entry.nickname }}</span>
+          <span class="lb-wins">{{ entry.wins }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -251,6 +296,21 @@ export default {
     const isNicknameLocked = ref(false);
     const showNicknameConfirm = ref(false);
     const previousNickname = ref("");
+    const activeTab = ref("lobby");
+    const leaderboardEntries = ref([]);
+    const isLoadingLeaderboard = ref(false);
+
+    const switchToLeaderboard = async () => {
+      activeTab.value = "leaderboard";
+      isLoadingLeaderboard.value = true;
+      try {
+        leaderboardEntries.value = await gunManager.getLeaderboard();
+      } catch (error) {
+        console.error("Error loading leaderboard:", error);
+      } finally {
+        isLoadingLeaderboard.value = false;
+      }
+    };
 
     const showNotification = (message, type = 'info') => {
       const id = Date.now();
@@ -669,6 +729,10 @@ export default {
       createLobbyEntry,
       joinGame,
       cancelGame,
+      activeTab,
+      leaderboardEntries,
+      isLoadingLeaderboard,
+      switchToLeaderboard,
     };
   },
 };
@@ -1216,5 +1280,113 @@ button:disabled {
     opacity: 0;
     transform: translateX(100%);
   }
+}
+
+/* Tab selector */
+.tab-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: #e0e0e0;
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.2s;
+  border-radius: 8px;
+}
+
+.tab-btn:hover:not(:disabled):not(.active) {
+  color: #333;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.tab-btn.active {
+  color: #1a1a1a;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Leaderboard */
+.leaderboard-section {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.leaderboard-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: white;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.leaderboard-item.is-me {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+}
+
+.leaderboard-item.rank-1 .lb-rank {
+  color: #f9a825;
+  font-weight: 800;
+}
+
+.leaderboard-item.rank-2 .lb-rank {
+  color: #9e9e9e;
+  font-weight: 800;
+}
+
+.leaderboard-item.rank-3 .lb-rank {
+  color: #bf8040;
+  font-weight: 800;
+}
+
+.lb-rank {
+  width: 40px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #888;
+}
+
+.lb-player {
+  flex: 1;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.lb-wins {
+  width: 60px;
+  text-align: center;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 </style>

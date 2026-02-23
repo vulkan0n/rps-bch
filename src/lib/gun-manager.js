@@ -7,6 +7,7 @@ class GunManager {
     this.lobby = this.gun.get("rps-bch-lobby");
     this.matches = this.gun.get("rps-bch-matches");
     this.users = this.gun.get("rps-bch-users");
+    this.leaderboard = this.gun.get("rps-bch-leaderboard");
   }
 
   // Guardar nickname de usuario (con firma opcional)
@@ -145,6 +146,63 @@ class GunManager {
     revealData[`reveal${player}Secret`] = secret;
     revealData[`reveal${player}Time`] = Date.now();
     await this.matches.get(matchId).put(revealData);
+  }
+
+  // Registrar resultado de partida en el leaderboard
+  recordResult(address, nickname, result) {
+    const node = this.leaderboard.get(address);
+    return new Promise((resolve) => {
+      let resolved = false;
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          // No data found, start fresh
+          const stats = { nickname, wins: 0, losses: 0, draws: 0, updatedAt: Date.now() };
+          if (result === "win") stats.wins = 1;
+          else if (result === "loss") stats.losses = 1;
+          else if (result === "draw") stats.draws = 1;
+          node.put(stats);
+          resolve();
+        }
+      }, 3000);
+
+      node.once((data) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          const wins = (data?.wins || 0) + (result === "win" ? 1 : 0);
+          const losses = (data?.losses || 0) + (result === "loss" ? 1 : 0);
+          const draws = (data?.draws || 0) + (result === "draw" ? 1 : 0);
+          node.put({ nickname, wins, losses, draws, updatedAt: Date.now() });
+          resolve();
+        }
+      });
+    });
+  }
+
+  // Obtener leaderboard ordenado por victorias
+  getLeaderboard(limit = 10, timeout = 5000) {
+    return new Promise((resolve) => {
+      const entries = [];
+      const collected = new Set();
+
+      const timer = setTimeout(() => {
+        entries.sort((a, b) => b.wins - a.wins);
+        resolve(entries.slice(0, limit));
+      }, timeout);
+
+      this.leaderboard.map().once((data, key) => {
+        if (!data || !data.nickname || collected.has(key)) return;
+        collected.add(key);
+        entries.push({
+          address: key,
+          nickname: data.nickname,
+          wins: data.wins || 0,
+          losses: data.losses || 0,
+          draws: data.draws || 0,
+        });
+      });
+    });
   }
 
   // Observar partida

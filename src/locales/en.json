@@ -83,6 +83,13 @@
     "paymentError": "Error sending payment: {message}",
     "matchDataError": "Error: match data not available"
   },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "loading": "Loading leaderboard...",
+    "noEntries": "No games played yet",
+    "player": "Player",
+    "wins": "Wins"
+  },
   "moves": {
     "rock": "Rock",
     "paper": "Paper",
