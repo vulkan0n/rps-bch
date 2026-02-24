@@ -38,7 +38,7 @@ Note: No test runner or linter is configured.
 ### Game Flow
 
 1. **GameLobby.vue** - Player connects wallet, creates/joins match via GunDB
-2. **GameRoom.vue** - Four phases: Selecting → Waiting (commit) → Revealing → Result
+2. **ActiveMatch.vue** - Five phases: Connecting → Selecting → Waiting (opponent commit) → Resolving (auto-reveal) → Result
 
 ### Commit-Reveal Protocol
 
