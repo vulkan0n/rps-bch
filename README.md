@@ -1,5 +1,7 @@
 # RPS×BCH
 
+**Live:** https://vulkan0n.github.io/rps-bch/
+
 ![Preview](docs/screenshot.png)
 
 A peer-to-peer Rock, Paper, Scissors game where players wager real **Bitcoin Cash**. No server, no accounts, no intermediaries — just connect a wallet and play.
