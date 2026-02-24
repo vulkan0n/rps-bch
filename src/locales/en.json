@@ -2,7 +2,9 @@
   "app": {
     "title": "Rock, Paper, Scissors",
     "subtitle": "Play and bet with Bitcoin Cash",
-    "footer": "Powered by Bitcoin Cash | P2P with GunDB | CashScript Smart Contracts"
+    "footer": "Powered by Bitcoin Cash | P2P with GunDB | CashScript Smart Contracts",
+    "footerPromo": "Bitcoin Cash promotion site",
+    "footerCredit": "Made with 💚 by"
   },
   "lobby": {
     "title": "Game Lobby",

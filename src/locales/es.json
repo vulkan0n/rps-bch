@@ -2,7 +2,9 @@
   "app": {
     "title": "Piedra, Papel o Tijera",
     "subtitle": "Juega y apuesta con Bitcoin Cash",
-    "footer": "Powered by Bitcoin Cash | P2P with GunDB | CashScript Smart Contracts"
+    "footer": "Powered by Bitcoin Cash | P2P with GunDB | CashScript Smart Contracts",
+    "footerPromo": "Sitio de promoción de Bitcoin Cash",
+    "footerCredit": "Hecho con 💚 por"
   },
   "lobby": {
     "title": "Lobby de Juego",

@@ -29,7 +29,8 @@
     </main>
 
     <footer>
-      <p>{{ $t('app.footer') }}</p>
+      <p>{{ $t('app.footerPromo') }}</p>
+      <p>{{ $t('app.footerCredit') }} <a href="https://github.com/vulkan0n" target="_blank" rel="noopener">vulkan0n</a></p>
     </footer>
   </div>
 </template>
@@ -359,7 +360,19 @@ footer {
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+footer a {
+  color: var(--green);
+  text-decoration: none;
+  transition: text-shadow 0.2s;
+}
+
+footer a:hover {
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
 }
 </style>
