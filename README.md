@@ -1,38 +1,42 @@
-# rps-bch
+# RPS×BCH
 
-This template should help get you started developing with Vue 3 in Vite.
+A peer-to-peer Rock, Paper, Scissors game where players wager real **Bitcoin Cash**. No server, no accounts, no intermediaries — just connect a wallet and play.
 
-## Recommended IDE Setup
+## How it works
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+1. **Connect a wallet** — create a new one in-browser or import an existing one via WIF private key.
+2. **Create or join a game** — publish a match with a BCH bet amount to the lobby, or accept one from another player.
+3. **Play** — both players commit their move as a hash before revealing it, preventing cheating.
+4. **Get paid** — the winner receives the BCH directly. In case of a draw, each player gets their bet back.
 
-## Recommended Browser Setup
+All match state is synchronized in real time between peers. No central server handles game logic or funds.
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## Tech stack
 
-## Customize configuration
+| Layer | Technology |
+|---|---|
+| Frontend | Vue 3 (Composition API) + Pinia + Vue Router |
+| Build tool | Vite |
+| P2P sync | GunDB (decentralized real-time database) |
+| Blockchain | Bitcoin Cash (mainnet) |
+| BCH library | mainnet-js |
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+## Commit-reveal protocol
 
-## Project Setup
+To prevent a player from choosing their move after seeing the opponent's, moves are committed as `SHA256(move + secret)` before being revealed. Both players must commit before either can reveal, making cheating impossible.
 
-```sh
+## Running locally
+
+```bash
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
 ```
 
-### Compile and Minify for Production
+Open `http://localhost:5173` in your browser.
 
-```sh
+## Build for production
+
+```bash
 npm run build
+npm run preview
 ```

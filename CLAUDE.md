@@ -23,7 +23,7 @@ Note: No test runner or linter is configured.
 - **Frontend:** Vue 3 (Composition API) + Pinia + Vue Router
 - **Build:** Vite 7.3
 - **P2P:** GunDB (relay at https://gundb-relay.onrender.com/gun)
-- **Blockchain:** mainnet-js + CashScript (Bitcoin Cash)
+- **Blockchain:** mainnet-js (Bitcoin Cash)
 
 ### Key Modules
 
