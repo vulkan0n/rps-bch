@@ -108,6 +108,10 @@
     "paymentReceived": "Payment received!",
     "paymentError": "Payment error: {message}"
   },
+  "intro": {
+    "title": "Welcome to RPS×BCH",
+    "text": "Challenge players worldwide to Rock, Paper, Scissors — with real Bitcoin Cash on the line. No accounts, no registration, no waiting. Connect a wallet and start playing in seconds."
+  },
   "moves": {
     "rock": "Rock",
     "paper": "Paper",

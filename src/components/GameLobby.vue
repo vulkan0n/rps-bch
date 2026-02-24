@@ -33,6 +33,12 @@
       >{{ $t('leaderboard.title') }}</button>
     </div>
 
+    <!-- Intro banner: visible only when wallet is disconnected -->
+    <div v-if="!playerAddress && !isLoadingWallet" class="intro-banner">
+      <div class="intro-banner-title">{{ $t('intro.title') }}</div>
+      <p class="intro-banner-text">{{ $t('intro.text') }}</p>
+    </div>
+
     <div class="content-grid">
     <div v-show="activeTab === 'lobby'" class="lobby-column">
     <div class="section-heading">{{ $t('lobby.title') }}</div>
@@ -1767,5 +1773,32 @@ input[type="password"]:disabled {
   font-size: 0.85rem;
   color: var(--amber);
   font-weight: normal;
+}
+
+/* === INTRO BANNER === */
+.intro-banner {
+  background: var(--amber-glow-strong);
+  border: 1px solid var(--amber);
+  border-left: 3px solid var(--amber);
+  box-shadow: 0 0 20px rgba(255, 170, 0, 0.12);
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.intro-banner-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  text-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
+  margin-bottom: 8px;
+}
+
+.intro-banner-text {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--text);
+  line-height: 1.55;
+  margin: 0;
 }
 </style>

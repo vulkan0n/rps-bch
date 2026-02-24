@@ -108,6 +108,10 @@
     "paymentReceived": "Pago recibido!",
     "paymentError": "Error de pago: {message}"
   },
+  "intro": {
+    "title": "Bienvenido a RPS×BCH",
+    "text": "Desafía jugadores de todo el mundo a Piedra, Papel o Tijera — con Bitcoin Cash real en juego. Sin cuentas, sin registro, sin esperas. Conecta una wallet y empieza a jugar en segundos."
+  },
   "moves": {
     "rock": "Piedra",
     "paper": "Papel",
